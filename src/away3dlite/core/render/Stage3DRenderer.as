@@ -433,7 +433,7 @@ package away3dlite.core.render
 				var mipmap:Boolean = false;
 				if (material is AdvancedBitmapMaterial && (material as AdvancedBitmapMaterial).mipmap)
 					mipmap = true;
-				createAndUploadTexture(bmp, mipmap);
+				texture = createAndUploadTexture(bmp, mipmap);
 			}
 			context.setTextureAt(0, texture);
 		}
@@ -542,12 +542,12 @@ package away3dlite.core.render
 		
 		private function createAndUploadTexture(bmp:BitmapData, mipmap:Boolean):Texture 
 		{
-			var texture:Texture = context.createTexture(bmd.width, bmd.height, Context3DTextureFormat.BGRA, false);
+			var texture:Texture = context.createTexture(bmp.width, bmp.height, Context3DTextureFormat.BGRA, false);
 			
 			// mipmap texture generation
 			if (mipmap && bmp.width == bmp.height) 
 			{
-				texture.uploadFromBitmapData(bmd, 0);
+				texture.uploadFromBitmapData(bmp, 0);
 				var s:int = bmp.width >> 1;
 				var miplevel:int = 1;
 				while (s > 0) {
