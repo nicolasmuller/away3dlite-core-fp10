@@ -202,7 +202,7 @@ package away3dlite.containers {
         	}
         }
         
-        private function fireMouseEvent(type:String, ctrlKey:Boolean = false, shiftKey:Boolean = false):void
+        arcane function fireMouseEvent(type:String, ctrlKey:Boolean = false, shiftKey:Boolean = false):void
         {
         	if (!mouseEnabled3D)
         		return;

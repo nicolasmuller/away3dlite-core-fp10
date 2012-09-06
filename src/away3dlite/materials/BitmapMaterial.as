@@ -1,6 +1,9 @@
 package away3dlite.materials
 {
+	import away3dlite.arcane;
 	import flash.display.*;
+	
+	use namespace arcane;
 	
     /**
      * Basic bitmap material
@@ -31,6 +34,7 @@ package away3dlite.materials
 		public function set repeat(val:Boolean):void
 		{
 			_graphicsBitmapFill.repeat = val;
+			_program = null;
 		}
 		
 		/**
@@ -44,6 +48,7 @@ package away3dlite.materials
 		public function set smooth(val:Boolean):void
 		{
 			_graphicsBitmapFill.smooth = val;
+			_program = null;
 		}
 		
 		/**

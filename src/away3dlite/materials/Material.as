@@ -83,6 +83,8 @@ package away3dlite.materials
 		public var graphicsData:Vector.<IGraphicsData>;
 		/** @private */
 		public var trianglesIndex:int;
+		/** @private */
+		arcane var _program:*;
 		
 		/**
 		 * Switches on the debug outlines around each face drawn with the material. Defaults to false.

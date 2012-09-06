@@ -64,10 +64,13 @@ package away3dlite.core.base
 	 */
 	public class Object3D extends Sprite
 	{
+		static private var ZERO:Vector3D = new Vector3D();
 		/** @private */
 		arcane var _perspCulling:Boolean;
 		/** @private */
 		arcane var _screenZ:Number = 0;
+		/** @private */
+		arcane var _screenPosition:Vector3D;
 		/** @private */
 		arcane var _scene:Scene3D;
 		/** @private */
@@ -92,6 +95,7 @@ package away3dlite.core.base
 			_viewMatrix3D.append(camera._screenMatrix3D);
 			
 			_screenZ = _viewMatrix3D.position.z;
+			_screenPosition = Utils3D.projectVector(_viewMatrix3D, ZERO);
 			
 			//perspective culling
 			var persp:Number = camera.zoom / (1 + _screenZ / camera.focus);
@@ -162,6 +166,14 @@ package away3dlite.core.base
 		public function get screenZ():Number
 		{
 			return _screenZ;
+		}
+		
+		/**
+		 * Returns the 2D position of the 3d object.
+		 */
+		public function get screenPosition():Vector3D
+		{
+			return _screenPosition;
 		}
 		
 		/**

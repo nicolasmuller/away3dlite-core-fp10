@@ -16,6 +16,8 @@ package away3dlite.core.base
 	public class Mesh extends Object3D
 	{
 		/** @private */
+		arcane var _verticesDirty:Boolean;
+		/** @private */
 		arcane var _materialsDirty:Boolean;
 		/** @private */
 		arcane var _materialsCacheList:Vector.<Material> = new Vector.<Material>();
@@ -41,6 +43,8 @@ package away3dlite.core.base
 		arcane var _vertices:Vector.<Number> = new Vector.<Number>();
 		/** @private */
 		arcane var _faceMaterials:Vector.<Material> = new Vector.<Material>();
+		/** @private */
+		arcane var _renderInfo:*;
 		/** @private */
 		arcane override function updateScene(val:Scene3D):void
 		{
@@ -112,6 +116,7 @@ package away3dlite.core.base
 			updateSortType();
  			
  			_materialsDirty = true;
+			_verticesDirty = true;
 		}
 		
 		protected var _vertexNormals:Vector.<Number>;
@@ -220,6 +225,14 @@ package away3dlite.core.base
 		}
 		
 		/**
+		 * Returns the 2d-rendered vertices.
+		 */
+		public function get screenVertices():Vector.<Number>
+		{
+			return _screenVertices;
+		}
+		
+		/**
 		 * Returns the faces used in the mesh.
 		 */
 		public function get faces():Vector.<Face>
@@ -259,6 +272,7 @@ package away3dlite.core.base
 		public function set bothsides(val:Boolean):void
 		{
 			_bothsides = val;
+			_verticesDirty = true;
 			
 			if (_bothsides) {
 				_culling = TriangleCulling.NONE;
