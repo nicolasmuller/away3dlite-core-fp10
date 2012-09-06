@@ -273,12 +273,7 @@ package away3dlite.core.render
 		{
 			_view.removeEventListener(Event.REMOVED_FROM_STAGE, dispose);
 			
-			for each(var mesh:Mesh in toDispose)
-			{
-				var renderInfo:MeshRenderInfo = mesh._renderInfo;
-				if (renderInfo) renderInfo.dispose();
-			}
-			toDispose.length = 0;
+			recycle();
 			
 			stage.stage3Ds[contextID].removeEventListener(Event.CONTEXT3D_CREATE, context3dCreate);
 			if (context) {
@@ -288,6 +283,31 @@ package away3dlite.core.render
 			
 			stage.removeEventListener(MouseEvent.MOUSE_MOVE, stage_mouse);
 			stage = null;
+		}
+		
+		/**
+		 * Dispose all programs and buffers
+		 */
+		public function recycle():void 
+		{
+			for each(var mesh:Mesh in toDispose)
+			{
+				if (mesh.material is BitmapMaterial)
+					BitmapMaterial(mesh.material)._program = null;
+				
+				var renderInfo:MeshRenderInfo = mesh._renderInfo;
+				if (renderInfo) {
+					renderInfo.dispose();
+					mesh._renderInfo = null;
+				}
+			}
+			toDispose.length = 0;
+			
+			for (var pid:String in programs) 
+			{
+				if (programs[pid]) programs[pid].dispose();
+				delete programs[pid];
+			}
 		}
 		
 		private function stage_mouse(e:MouseEvent):void 
