@@ -17,8 +17,12 @@ The goal is to have a rudimentary (but simple and fast) Stage3D renderer for sim
  - additive blendmode (Object3D's blendMode),
  - custom shaders (Object3D's arcane _program).
 
+**Gotchas:**
+ - for transparent PNGs to blend correctly, the Object3Ds order (in their container) is meaningful, not their z position.
+
 **TODO:**
  - check stability, leaks
+ - test all the primitives, colladas,...
  - fix projection to match exactly the FP10 output (it's close but not enough to reuse the original mouse handling),
  
 **Example usage:** 
