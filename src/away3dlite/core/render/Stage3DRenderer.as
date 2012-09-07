@@ -443,7 +443,6 @@ package away3dlite.core.render
 			for (var i:int = 0; i < n; i++)
 				if (bmps[i] == bmp) {
 					texture = textures[i];
-					if (!texture) bmps.splice(i, 1);
 					break;
 				}
 				
@@ -468,9 +467,12 @@ package away3dlite.core.render
 				if (bmps[i] == bmp) {
 					texture = textures[i];
 					textures[i] = null;
+					bmps.splice(i, 1);
+					textures.splice(i, 1);
 					break;
 				}
-			if (texture) texture.dispose();
+			if (texture) 
+				texture.dispose();
 		}
 		
 		/**
