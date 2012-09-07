@@ -174,21 +174,21 @@ package away3dlite.core.render
 			{
 				if (!c.visible) continue;
 				
-				mObject.copyRawDataFrom(mParent.rawData);
-				mObject.prepend(c.transform.matrix3D);
+				c.viewMatrix3D.copyRawDataFrom(mParent.rawData);
+				c.viewMatrix3D.prepend(c.transform.matrix3D);
 				
-				c._screenPosition = Utils3D.projectVector(mObject, zero);
+				c._screenPosition = Utils3D.projectVector(c.viewMatrix3D, zero);
 				c._screenPosition.x *= stageWidth / 2;
 				c._screenPosition.y *= -stageHeight / 2;
 				
-				if (c is ObjectContainer3D) renderContainer(cont, mObject);
+				if (c is ObjectContainer3D) renderContainer(c as ObjectContainer3D, c.viewMatrix3D);
 				else if (c is Mesh) 
 				{
 					var mesh:Mesh = c as Mesh;
 					if (mesh._indices.length && setProgram(mesh.material))
 					{
 						var renderInfo:MeshRenderInfo = prepareMeshBuffers(mesh);
-						context.setProgramConstantsFromMatrix(Context3DProgramType.VERTEX, 0, mObject, true);
+						context.setProgramConstantsFromMatrix(Context3DProgramType.VERTEX, 0, c.viewMatrix3D, true);
 						context.drawTriangles(renderInfo.indexBuffer);
 					}
 				}
@@ -207,7 +207,6 @@ package away3dlite.core.render
 		arcane var program:Program3D;
 		arcane var programs:Object = {};
 		arcane var mProjection:Matrix3D = new Matrix3D();
-		arcane var mObject:Matrix3D = new Matrix3D();
 		arcane var zero:Vector3D = new Vector3D();
 		arcane var projection:PerspectiveMatrix3D = new PerspectiveMatrix3D();
 		arcane var sceneScale:Number = 1/100;
@@ -437,6 +436,7 @@ package away3dlite.core.render
 		 */
 		private function createTexture(material:BitmapMaterial):void
 		{
+			if (!material || !material.bitmap) return;
 			var bmp:BitmapData = material.bitmap;
 			var texture:Texture = null;
 			var n:int = bmps.length;
