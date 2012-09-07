@@ -258,6 +258,7 @@ package away3dlite.core.base
 			_material = val;
 			
 			_materialsDirty = true;
+			_verticesDirty = true;
 		}
 		
 		/**
