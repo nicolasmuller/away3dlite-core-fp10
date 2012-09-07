@@ -191,8 +191,6 @@ package away3dlite.core.render
 						context.setProgramConstantsFromMatrix(Context3DProgramType.VERTEX, 0, mObject, true);
 						context.drawTriangles(renderInfo.indexBuffer);
 					}
-					// TODO explicit TransparentBitmapMaterial
-					// TODO ColorMaterial
 				}
 			}
 		}
@@ -327,6 +325,7 @@ package away3dlite.core.render
 			if (context && stageWidth && stageHeight) 
 			{
 				// compute projection matrix
+				// TODO fix projection to match exactly the FP10 output
 				var r:Number = stageWidth / stageHeight;
 				var w:Number = (stageHeight / 1000);
 				projection.perspectiveLH(w * r, w, 0.9, 1000);
@@ -459,6 +458,8 @@ package away3dlite.core.render
 		 */
 		private function setProgram(material:Material):Boolean 
 		{
+			// TODO shader fixing precomputed alphas
+			// TODO shader for ColorMaterial
 			if (material is BitmapMaterial)
 			{
 				var bmat:BitmapMaterial = material as BitmapMaterial;
