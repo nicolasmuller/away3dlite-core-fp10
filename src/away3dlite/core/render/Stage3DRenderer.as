@@ -47,10 +47,7 @@ package away3dlite.core.render
 		private var _i:int;
 		private var _j:int;
 		private var _k:int;
-		
 		private var _material_graphicsData:Vector.<IGraphicsData>;
-		
-		// Layer
 		private var _graphicsDatas:Dictionary = new Dictionary(true);
 		
 		private function collectFaces(object:Object3D):void
@@ -148,7 +145,7 @@ package away3dlite.core.render
 			if (!stageReady()) return;
 			
 			// clear
-			var rgb:int = stage.color & 0xffffff;
+			var rgb:int = stage.color;
 			var r:Number = ((rgb >> 16) & 0xff) / 256;
 			var g:Number = ((rgb >> 8) & 0xff) / 256;
 			var b:Number = (rgb & 0xff) / 256;
@@ -185,7 +182,7 @@ package away3dlite.core.render
 				else if (c is Mesh) 
 				{
 					var mesh:Mesh = c as Mesh;
-					if (mesh._indices.length && setProgram(mesh.material))
+					if (mesh._indices.length && setProgram(mesh.material, mesh.blendMode))
 					{
 						var renderInfo:MeshRenderInfo = prepareMeshBuffers(mesh);
 						context.setProgramConstantsFromMatrix(Context3DProgramType.VERTEX, 0, c.viewMatrix3D, true);
@@ -205,6 +202,7 @@ package away3dlite.core.render
 		arcane var stageHeight:int;
 		arcane var context:Context3D;
 		arcane var program:Program3D;
+		arcane var renderMode:String;
 		arcane var programs:Object = {};
 		arcane var mProjection:Matrix3D = new Matrix3D();
 		arcane var zero:Vector3D = new Vector3D();
@@ -217,39 +215,21 @@ package away3dlite.core.render
 			<color>
 				<vertex><![CDATA[
 					m44 op, va0, vc0	// m44 to output point
-					mov v0, va1			// interpolate the UVs (va0) into variable register v1
+					mov v1, va1			// interpolate Vertex Color (va1), to the variable register v1
 				]]></vertex>
 				<fragment><![CDATA[
-					tex oc v0, fs0 <>	// sample the texture (fs0) at the interpolated UV coordinates (v0) and output
+					mov oc, v1			// move the Vertex Color (v1) to the output color
 				]]></fragment>
 			</color>
 			<bitmap>
 				<vertex><![CDATA[
 					m44 op, va0, vc0	// m44 to output point
-					mov v0, va1			// interpolate the UVs (va0) into variable register v1
+					mov v1, va1			// interpolate the UVs (va1) into variable register v1
 				]]></vertex>
 				<fragment><![CDATA[
-					tex oc v0, fs0 <>	// sample the texture (fs0) at the interpolated UV coordinates (v0) and output
+					tex oc, v1, fs1 <>	// sample the texture (fs1) at the interpolated UV coordinates (v0) and output
 				]]></fragment>
 			</bitmap>
-			<!--<bitmap-transparency>
-				<vertex><![CDATA[
-					m44 op, va0, vc0	// m44 to output point
-					mov v0, va1			// interpolate the UVs (va0) into variable register v1
-				]]></vertex>
-				<fragment><![CDATA[
-					tex oc v0, fs0 <>	// sample the texture (fs0) at the interpolated UV coordinates (v0) and output
-				]]></fragment>
-			</bitmap-transparency>-->
-			<!--<bitmap-precomputed>
-				<vertex><![CDATA[
-					m44 op, va0, vc0	// m44 to output point
-					mov v0, va1			// interpolate the UVs (va0) into variable register v1
-				]]></vertex>
-				<fragment><![CDATA[
-					tex oc v0, fs0 <>	// sample the texture (fs0) at the interpolated UV coordinates (v0) and output
-				]]></fragment>
-			</bitmap-precomputed>-->
 		</programs>;
 		
 		private function init():void
@@ -274,6 +254,9 @@ package away3dlite.core.render
 			
 			stage.stage3Ds[contextID].removeEventListener(Event.CONTEXT3D_CREATE, context3dCreate);
 			if (context) {
+				context.setTextureAt(1, null);
+				context.setVertexBufferAt(0, null);
+				context.setVertexBufferAt(1, null);
 				context.dispose();
 				context = null;
 			}
@@ -348,11 +331,8 @@ package away3dlite.core.render
 				var r:Number = stageWidth / stageHeight;
 				var w:Number = (stageHeight / 1000);
 				projection.perspectiveLH(w * r, w, 0.9, 1000);
-				
 				// setup context
 				context.configureBackBuffer(stageWidth, stageHeight, 2, true);
-				//context.setDepthTest(true, Context3DCompareMode.LESS);
-				context.setBlendFactors(Context3DBlendFactor.ONE, Context3DBlendFactor.ONE_MINUS_SOURCE_ALPHA);
 			}
 		}
 		
@@ -363,10 +343,10 @@ package away3dlite.core.render
 		{
 			var renderInfo:MeshRenderInfo = updateMeshBuffers(mesh);
 			
-			// copy in register "0", from the buffer "vertexBuffer, starting from the postion "0" the FLOAT_3 next number
-			context.setVertexBufferAt(0, renderInfo.vertexBuffer, 0, Context3DVertexBufferFormat.FLOAT_3); // register "0" now contains x,y,z
-			// copy in register "1" from "vertexBuffer", starting from index "3", the next FLOAT_3 numbers
-			context.setVertexBufferAt(1, renderInfo.vertexBuffer, 3, Context3DVertexBufferFormat.FLOAT_3); // register 1 now contains u,v,t
+			// move x,y,z in register 0
+			context.setVertexBufferAt(0, renderInfo.vertexBuffer, 0, Context3DVertexBufferFormat.FLOAT_3);
+			// move u,v,t or r,g,b,a in register 1
+			context.setVertexBufferAt(1, renderInfo.vertexBuffer, 3, renderInfo.vertexInfoFormat);
 			
 			return renderInfo;
 		}
@@ -389,20 +369,54 @@ package away3dlite.core.render
 			else renderInfo.dispose();
 			
 			// vertex buffer
-			var vertexData:Vector.<Number> = new Vector.<Number>();
-			var vertices:Vector.<Number> = mesh._vertices;
-			var uvs:Vector.<Number> = mesh._uvtData;
-			var count:int = vertices.length / 3;
-			renderInfo.vertexBuffer = context.createVertexBuffer(count, 6);
-			var vindex:int = 0;
-			var tindex:int = 0;
-			for (var i:int = 0; i < count; i++, vindex+=3, tindex+=3)
+			var vertexData:Vector.<Number>;
+			var vertices:Vector.<Number>;
+			var count:int;
+			var i:int, vindex:int, tindex:int;
+			
+			if (mesh.material is BitmapMaterial)
 			{
-				vertexData.push(
-					vertices[vindex], vertices[vindex + 1], vertices[vindex + 2], 
-					uvs[tindex], uvs[tindex + 1], uvs[tindex + 2]);
+				renderInfo.vertexInfoFormat = Context3DVertexBufferFormat.FLOAT_3;
+				
+				vertexData = new Vector.<Number>();
+				vertices = mesh._vertices;
+				var uvs:Vector.<Number> = mesh._uvtData;
+				count = vertices.length / 3;
+				renderInfo.vertexBuffer = context.createVertexBuffer(count, 6);
+				vindex = 0;
+				tindex = 0;
+				for (i = 0; i < count; i++, vindex+=3, tindex+=3)
+				{
+					vertexData.push(
+						vertices[vindex], vertices[vindex + 1], vertices[vindex + 2], 
+						uvs[tindex], uvs[tindex + 1], uvs[tindex + 2]);
+				}
+				renderInfo.vertexBuffer.uploadFromVector(vertexData, 0, count);
 			}
-			renderInfo.vertexBuffer.uploadFromVector(vertexData, 0, count);
+			
+			else if (mesh.material is ColorMaterial)
+			{
+				renderInfo.vertexInfoFormat = Context3DVertexBufferFormat.FLOAT_4;
+				
+				vertexData = new Vector.<Number>();
+				vertices = mesh._vertices;
+				count = vertices.length / 3;
+				renderInfo.vertexBuffer = context.createVertexBuffer(count, 7);
+				vindex = 0;
+				var cmat:ColorMaterial = mesh.material as ColorMaterial;
+				var rgb:int = cmat.color;
+				var r:Number = ((rgb >> 16) & 0xff) / 256;
+				var g:Number = ((rgb >> 8) & 0xff) / 256;
+				var b:Number = (rgb & 0xff) / 256;
+				var a:Number = cmat.alpha;
+				for (i = 0; i < count; i++, vindex+=3)
+				{
+					vertexData.push(
+						vertices[vindex], vertices[vindex + 1], vertices[vindex + 2], 
+						r, g, b, a);
+				}
+				renderInfo.vertexBuffer.uploadFromVector(vertexData, 0, count);
+			}
 			
 			// index buffer
 			var facelens:Vector.<int> = mesh._faceLengths;
@@ -449,11 +463,11 @@ package away3dlite.core.render
 			if (!texture) 
 			{
 				var mipmap:Boolean = false;
-				if (material is AdvancedBitmapMaterial && (material as AdvancedBitmapMaterial).mipmap)
+				if (material is BitmapMaterialEx && (material as BitmapMaterialEx).mipmap)
 					mipmap = true;
 				texture = createAndUploadTexture(bmp, mipmap);
 			}
-			context.setTextureAt(0, texture);
+			context.setTextureAt(1, texture);
 		}
 		
 		/**
@@ -478,10 +492,14 @@ package away3dlite.core.render
 		/**
 		 * Create program for this material
 		 */
-		private function setProgram(material:Material):Boolean 
+		private function setProgram(material:Material, blendMode:String):Boolean 
 		{
-			// TODO shader fixing precomputed alphas
-			// TODO shader for ColorMaterial
+			var transparent:Boolean = true;
+			var premultipliedAlphas:Boolean = true;
+			var mipmap:Boolean = false;
+			var additive:Boolean = blendMode == "add";
+			var template:String;
+			
 			if (material is BitmapMaterial)
 			{
 				var bmat:BitmapMaterial = material as BitmapMaterial;
@@ -490,34 +508,85 @@ package away3dlite.core.render
 				if (!bmat.bitmap) return false;
 				createTexture(bmat);
 				
+				// options
+				if (material is BitmapMaterialEx)
+				{
+					var amat:BitmapMaterialEx = material as BitmapMaterialEx;
+					transparent = amat.transparent;
+					premultipliedAlphas = amat.premultipliedAlphas;
+					mipmap = amat.mipmap;
+				}
+				
 				// get program
+				template = "bitmap";
 				if (!bmat._program) 
 				{
-					var template:String = "bitmap";
 					var textureOptions:String = "2d," 
 						+ (bmat.repeat ? "repeat," : "clamp,")
-						+ (bmat.smooth ? "linear," : "nearest,");
-					
-					if (material is AdvancedBitmapMaterial)
-					{
-						var amat:AdvancedBitmapMaterial = material as AdvancedBitmapMaterial;
-						//if (amat.transparent) template += "-transparency";
-						//if (amat.precomputedAlphas) template += "-precomputed";
-						textureOptions += (amat.mipmap ? "miplinear" : "nomip");						
-					}
-					else textureOptions += "nomip";
-					
+						+ (bmat.smooth ? "linear," : "nearest,")
+						+ (mipmap ? "miplinear" : "nomip");
 					bmat._program = createAndCompileProgram(template, textureOptions);
 				}
+				
 				// set active
+				setBlendMode(additive, transparent, premultipliedAlphas);
 				if (program != bmat._program) 
 				{
 					program = bmat._program;
+					renderMode = template;
+					context.setProgram(program);
+				}
+				return program != null;
+			}
+			
+			else if (material is ColorMaterial)
+			{
+				var cmat:ColorMaterial = material as ColorMaterial;
+				
+				// clear texture
+				context.setTextureAt(1, null);
+				
+				// get program
+				template = "color";
+				if (!cmat._program) 
+				{
+					cmat._program = createAndCompileProgram(template, "");
+				}
+				
+				// set active
+				setBlendMode(additive, cmat.alpha != 1, false);
+				if (program != cmat._program) 
+				{
+					program = cmat._program;
+					renderMode = template;
 					context.setProgram(program);
 				}
 				return program != null;
 			}
 			return false;
+		}
+		
+		/**
+		 * Set GPU blending mode
+		 */
+		private function setBlendMode(additive:Boolean, transparent:Boolean, premultipliedAlphas:Boolean):void 
+		{			
+			if (additive)
+			{
+				if (premultipliedAlphas)
+					context.setBlendFactors(Context3DBlendFactor.ONE, Context3DBlendFactor.ONE);
+				else
+					context.setBlendFactors(Context3DBlendFactor.SOURCE_ALPHA, Context3DBlendFactor.DESTINATION_ALPHA);
+			}
+			else
+			{
+				if (!transparent)
+					context.setBlendFactors(Context3DBlendFactor.ONE, Context3DBlendFactor.ZERO);
+				else if (premultipliedAlphas)
+					context.setBlendFactors(Context3DBlendFactor.ONE, Context3DBlendFactor.ONE_MINUS_SOURCE_ALPHA);
+				else
+					context.setBlendFactors(Context3DBlendFactor.SOURCE_ALPHA, Context3DBlendFactor.ONE_MINUS_SOURCE_ALPHA);
+			}
 		}
 
 		/**
@@ -565,29 +634,40 @@ package away3dlite.core.render
 		
 		private function createAndUploadTexture(bmp:BitmapData, mipmap:Boolean):Texture 
 		{
-			var texture:Texture = context.createTexture(bmp.width, bmp.height, Context3DTextureFormat.BGRA, false);
+			var w:int = nearestPow2(bmp.width);
+			var h:int = nearestPow2(bmp.height);
+			var texture:Texture = context.createTexture(w, h, Context3DTextureFormat.BGRA, false);
 			
 			// mipmap texture generation
-			if (mipmap && bmp.width == bmp.height) 
+			if (mipmap && (w == h)) 
 			{
-				texture.uploadFromBitmapData(bmp, 0);
-				var s:int = bmp.width >> 1;
-				var miplevel:int = 1;
+				var s:int = w;
+				var miplevel:int = 0;
 				while (s > 0) {
 					texture.uploadFromBitmapData(getResizedBitmapData(bmp, s, s, true, 0), miplevel);
 					miplevel++; 
 					s = s >> 1;
 				}
 			}
-			else texture.uploadFromBitmapData(bmp);
+			else texture.uploadFromBitmapData(getResizedBitmapData(bmp, w, h, true, 0));
 			
 			bmps.push(bmp);
 			textures.push(texture);
 			return texture;
 		}
 		
+		private function nearestPow2(v:int):int
+		{
+			var p:int = 1;
+			while (p < v) p = p << 1;
+			return p;
+		}
+		
 		private function getResizedBitmapData(bmp:BitmapData, width:int, height:int, transparent:Boolean, background:uint):BitmapData 
 		{
+			if (bmp.width == width && bmp.height == height) 
+				return bmp;
+				
 			var b:BitmapData = new BitmapData(width, height, transparent, background);
 			var m:Matrix = new Matrix();
 			m.scale(width / bmp.width, height / bmp.height);
@@ -605,6 +685,7 @@ import flash.geom.Vector3D;
 class MeshRenderInfo
 {	
 	public var vertexBuffer:VertexBuffer3D;
+	public var vertexInfoFormat:String;
 	public var indexBuffer:IndexBuffer3D;
 	public var screenPosition:Vector3D;
 	

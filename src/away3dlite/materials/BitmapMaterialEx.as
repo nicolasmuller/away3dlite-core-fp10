@@ -9,21 +9,21 @@ package away3dlite.materials
 	 * BitmapMaterial class with additional options to configure the shader
 	 * @author Philippe
 	 */
-	public class AdvancedBitmapMaterial extends BitmapMaterial 
+	public class BitmapMaterialEx extends BitmapMaterial 
 	{
 		/** @private */
-		protected var _mipmap:Boolean;
+		protected var _mipmap:Boolean = false;
 		/** @private */
-		//protected var _transparent:Boolean;
+		protected var _transparent:Boolean = true;
 		/** @private */
-		protected var _precomputedAlphas:Boolean;
+		protected var _premultipliedAlphas:Boolean = true;
 		
 		/**
 		 * Creates a new <code>BitmapMaterial</code> object.
 		 * 
 		 * @param	bitmap		The bitmapData object to be used as the material's texture.
 		 */
-		public function AdvancedBitmapMaterial(bitmap:BitmapData = null) 
+		public function BitmapMaterialEx(bitmap:BitmapData = null) 
 		{
 			super(bitmap);
 		}
@@ -44,7 +44,7 @@ package away3dlite.materials
 		
 		/**
 		 * Defines wether to bitmap contains alpha transparency
-		 
+		 */
 		public function get transparent():Boolean 
 		{
 			return _transparent;
@@ -54,19 +54,19 @@ package away3dlite.materials
 		{
 			_transparent = value;
 			_program = null;
-		}*/
+		}
 		
 		/**
 		 * Defines wether the bitmap needs pre-computed alphas correction
 		 */
-		public function get precomputedAlphas():Boolean 
+		public function get premultipliedAlphas():Boolean 
 		{
-			return _precomputedAlphas;
+			return _premultipliedAlphas;
 		}
 		
-		public function set precomputedAlphas(value:Boolean):void 
+		public function set premultipliedAlphas(value:Boolean):void 
 		{
-			_precomputedAlphas = value;
+			_premultipliedAlphas = value;
 			_program = null;
 		}
 	}
