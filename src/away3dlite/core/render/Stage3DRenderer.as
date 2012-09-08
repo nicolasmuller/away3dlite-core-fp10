@@ -182,11 +182,27 @@ package away3dlite.core.render
 				else if (c is Mesh) 
 				{
 					var mesh:Mesh = c as Mesh;
-					if (mesh._indices.length && setProgram(mesh.material, mesh.blendMode))
+					if (canRender(mesh))
 					{
-						var renderInfo:MeshRenderInfo = prepareMeshBuffers(mesh);
-						context.setProgramConstantsFromMatrix(Context3DProgramType.VERTEX, 0, c.viewMatrix3D, true);
-						context.drawTriangles(renderInfo.indexBuffer);
+						var renderInfo:MeshRenderInfo = updateMeshBuffers(mesh);
+						
+						var len:int = renderInfo.length;
+						var blendMode:String = mesh.blendMode;
+						for (var i:int = 0; i < len; i++) 
+						{
+							// set shader and blending option
+							if (setProgram(renderInfo.material[i], blendMode))
+							{
+								// move x,y,z in register 0
+								context.setVertexBufferAt(0, renderInfo.vertexBuffer[i], 0, Context3DVertexBufferFormat.FLOAT_3);
+								// move u,v,t or r,g,b,a in register 1
+								context.setVertexBufferAt(1, renderInfo.vertexBuffer[i], 3, renderInfo.vertexInfoFormat[i]);
+								// set projection matrix
+								context.setProgramConstantsFromMatrix(Context3DProgramType.VERTEX, 0, c.viewMatrix3D, true);
+								// provide triangles
+								context.drawTriangles(renderInfo.indexBuffer[i]);
+							}
+						}
 					}
 				}
 			}
@@ -196,6 +212,11 @@ package away3dlite.core.render
 		
 		public var culling:String = "front";
 		public var contextID:int = 0;
+		
+		/** allow the creation of textures (nearest power of 2 size) smaller than original bitmap */
+		public var optimizeTextureSize:Number = 0.1;
+		/** limit texture size */
+		public var maxTextureSize:int = 1024;
 		
 		arcane var stage:Stage;
 		arcane var stageWidth:int;
@@ -337,20 +358,14 @@ package away3dlite.core.render
 		}
 		
 		/**
-		 * Configure buffers
+		 * Determine if a mesh isn't empty and has a valid material
 		 */
-		private function prepareMeshBuffers(mesh:Mesh):MeshRenderInfo 
+		private function canRender(mesh:Mesh):Boolean
 		{
-			var renderInfo:MeshRenderInfo = updateMeshBuffers(mesh);
-			
-			// move x,y,z in register 0
-			context.setVertexBufferAt(0, renderInfo.vertexBuffer, 0, Context3DVertexBufferFormat.FLOAT_3);
-			// move u,v,t or r,g,b,a in register 1
-			context.setVertexBufferAt(1, renderInfo.vertexBuffer, 3, renderInfo.vertexInfoFormat);
-			
-			return renderInfo;
+			return mesh._indices.length && mesh.material
+				&& (mesh.material is BitmapMaterial || mesh.material is ColorMaterial);
 		}
-
+		
 		/**
 		 * Build and upload mesh vertext/index buffers
 		 */
@@ -368,79 +383,105 @@ package away3dlite.core.render
 			}
 			else renderInfo.dispose();
 			
-			// vertex buffer
-			var vertexData:Vector.<Number>;
-			var vertices:Vector.<Number>;
-			var count:int;
-			var i:int, vindex:int, tindex:int;
+			var material:Material = mesh.material;
+			var i:int, count:int;
 			
-			if (mesh.material is BitmapMaterial)
+			// VERTEX BUFFER
+			var vertices:Vector.<Number> = mesh._vertices;
+			var uvs:Vector.<Number> = mesh._uvtData;
+			var vertexData:Vector.<Number> = new Vector.<Number>();
+			var vindex:int = 0, tindex:int = 0;
+			var format:String = null, size:int = 0;
+			count = vertices.length / 3;
+			
+			if (material is BitmapMaterial)
 			{
-				renderInfo.vertexInfoFormat = Context3DVertexBufferFormat.FLOAT_3;
-				
-				vertexData = new Vector.<Number>();
-				vertices = mesh._vertices;
-				var uvs:Vector.<Number> = mesh._uvtData;
-				count = vertices.length / 3;
-				renderInfo.vertexBuffer = context.createVertexBuffer(count, 6);
-				vindex = 0;
-				tindex = 0;
 				for (i = 0; i < count; i++, vindex+=3, tindex+=3)
 				{
 					vertexData.push(
 						vertices[vindex], vertices[vindex + 1], vertices[vindex + 2], 
 						uvs[tindex], uvs[tindex + 1], uvs[tindex + 2]);
 				}
-				renderInfo.vertexBuffer.uploadFromVector(vertexData, 0, count);
+				format = Context3DVertexBufferFormat.FLOAT_3;
+				size = 6;
 			}
-			
-			else if (mesh.material is ColorMaterial)
+			else if (material is ColorMaterial)
 			{
-				renderInfo.vertexInfoFormat = Context3DVertexBufferFormat.FLOAT_4;
-				
-				vertexData = new Vector.<Number>();
-				vertices = mesh._vertices;
-				count = vertices.length / 3;
-				renderInfo.vertexBuffer = context.createVertexBuffer(count, 7);
-				vindex = 0;
-				var cmat:ColorMaterial = mesh.material as ColorMaterial;
-				var rgb:int = cmat.color;
+				// TODO ColorMaterial buffer building will only use the main model color (consistent with FP10 rendering)
+				vertexBuffer = context.createVertexBuffer(count, 7);
+				var rgb:int = (material as ColorMaterial).color;
 				var r:Number = ((rgb >> 16) & 0xff) / 256;
 				var g:Number = ((rgb >> 8) & 0xff) / 256;
 				var b:Number = (rgb & 0xff) / 256;
-				var a:Number = cmat.alpha;
+				var a:Number = (material as ColorMaterial).alpha;
 				for (i = 0; i < count; i++, vindex+=3)
 				{
 					vertexData.push(
 						vertices[vindex], vertices[vindex + 1], vertices[vindex + 2], 
 						r, g, b, a);
 				}
-				renderInfo.vertexBuffer.uploadFromVector(vertexData, 0, count);
+				format = Context3DVertexBufferFormat.FLOAT_4;
+				size = 7;
 			}
+			else return renderInfo; // unsupported material
 			
-			// index buffer
-			var facelens:Vector.<int> = mesh._faceLengths;
+			// create buffer
+			var vertexBuffer:VertexBuffer3D = context.createVertexBuffer(count, size);
+			vertexBuffer.uploadFromVector(vertexData, 0, count);
+			
+			// INDEX BUFFER(s)
+			var materials:Vector.<Material> = mesh._faceMaterials;
+			var faces:int = materials.length;
 			var indices:Vector.<int> = mesh._indices;
-			var indexes:Vector.<uint> = new Vector.<uint>();
-			var iindex:int = 0;
-			for each(var len:int in facelens) 
-			{
-				if (len == 3) {
-					indexes.push(indices[iindex], indices[iindex + 1], indices[iindex + 2]);
-					iindex += 3;
+			var facelens:Vector.<int> = mesh._faceLengths;
+			var iindex:int = 0, findex:int = 0, f:int = 0;
+			count = 0;
+			count = 0;
+			do {
+				// accumulate same-material faces
+				var temp:Material = materials[f++] || material;
+				if (f == faces) count++; 
+				else if (temp == material) { 
+					count++;
+					continue;
 				}
-				else if (len == 4) { // convert quads to tris
-					indexes.push(indices[iindex], indices[iindex + 1], indices[iindex + 3], indices[iindex + 1], indices[iindex + 2], indices[iindex + 3]);
-					iindex += 4;
+				else if (count == 0) {
+					count++;
+					material = temp;
+					continue;
 				}
+				// copy/convert indices
+				var indexes:Vector.<uint> = new Vector.<uint>();
+				for (i = 0; i < count; i++, findex++)
+				{
+					var len:int = facelens[findex];
+					if (len == 3) {
+						indexes.push(indices[iindex], indices[iindex + 1], indices[iindex + 2]);
+						iindex += 3;
+					}
+					else if (len == 4) { // convert quads to tris
+						indexes.push(indices[iindex], indices[iindex + 1], indices[iindex + 3], indices[iindex + 1], indices[iindex + 2], indices[iindex + 3]);
+						iindex += 4;
+					}
+				}
+				if (mesh.bothsides) // double-sided
+					indexes = indexes.concat( indexes.concat().reverse() );
+					
+				// create buffer
+				var indexBuffer:IndexBuffer3D = context.createIndexBuffer(indexes.length);
+				indexBuffer.uploadFromVector(indexes, 0, indexes.length);
+				
+				// store
+				renderInfo.material.push(material);
+				renderInfo.vertexBuffer.push(vertexBuffer);
+				renderInfo.vertexInfoFormat.push(format);
+				renderInfo.indexBuffer.push(indexBuffer);
+				
+				// next material
+				count = 1; 
+				material = temp;
 			}
-			
-			if (mesh.bothsides) // double-sided
-				indexes = indexes.concat( indexes.concat().reverse() );
-			
-			count = indexes.length;
-			renderInfo.indexBuffer = context.createIndexBuffer(count);
-			renderInfo.indexBuffer.uploadFromVector(indexes, 0, count);
+			while (f < faces);
 			
 			return renderInfo;
 		}
@@ -465,7 +506,7 @@ package away3dlite.core.render
 				var mipmap:Boolean = false;
 				if (material is BitmapMaterialEx && (material as BitmapMaterialEx).mipmap)
 					mipmap = true;
-				texture = createAndUploadTexture(bmp, mipmap);
+				texture = createAndUploadTexture(bmp, mipmap, material.smooth);
 			}
 			context.setTextureAt(1, texture);
 		}
@@ -632,7 +673,7 @@ package away3dlite.core.render
 			return lines.join("\n");
 		}
 		
-		private function createAndUploadTexture(bmp:BitmapData, mipmap:Boolean):Texture 
+		private function createAndUploadTexture(bmp:BitmapData, mipmap:Boolean, smooth:Boolean):Texture 
 		{
 			var w:int = nearestPow2(bmp.width);
 			var h:int = nearestPow2(bmp.height);
@@ -644,12 +685,12 @@ package away3dlite.core.render
 				var s:int = w;
 				var miplevel:int = 0;
 				while (s > 0) {
-					texture.uploadFromBitmapData(getResizedBitmapData(bmp, s, s, true, 0), miplevel);
+					texture.uploadFromBitmapData(getResizedBitmapData(bmp, s, s, true, 0, smooth), miplevel);
 					miplevel++; 
 					s = s >> 1;
 				}
 			}
-			else texture.uploadFromBitmapData(getResizedBitmapData(bmp, w, h, true, 0));
+			else texture.uploadFromBitmapData(getResizedBitmapData(bmp, w, h, true, 0, smooth));
 			
 			bmps.push(bmp);
 			textures.push(texture);
@@ -658,50 +699,66 @@ package away3dlite.core.render
 		
 		private function nearestPow2(v:int):int
 		{
+			var vo:int = Math.min(maxTextureSize, v * (1 - optimizeTextureSize));
 			var p:int = 1;
-			while (p < v) p = p << 1;
+			while (p < vo) p = p << 1;
 			return p;
 		}
 		
-		private function getResizedBitmapData(bmp:BitmapData, width:int, height:int, transparent:Boolean, background:uint):BitmapData 
+		private function getResizedBitmapData(bmp:BitmapData, width:int, height:int, transparent:Boolean, background:uint, smooth:Boolean):BitmapData 
 		{
 			if (bmp.width == width && bmp.height == height) 
 				return bmp;
-				
+			
+			if (width < bmp.width) smooth = true; // always smooth reduced bitmaps 
+			
 			var b:BitmapData = new BitmapData(width, height, transparent, background);
 			var m:Matrix = new Matrix();
 			m.scale(width / bmp.width, height / bmp.height);
-			b.draw(bmp, m, null, null, null, true);
+			b.draw(bmp, m, null, null, null, smooth);
 			return b;
 		}
 	}
 }
 
 
+import away3dlite.materials.Material;
 import flash.display3D.IndexBuffer3D;
 import flash.display3D.VertexBuffer3D;
 import flash.geom.Vector3D;
 
 class MeshRenderInfo
-{	
-	public var vertexBuffer:VertexBuffer3D;
-	public var vertexInfoFormat:String;
-	public var indexBuffer:IndexBuffer3D;
-	public var screenPosition:Vector3D;
+{
+	public var material:Vector.<Material>;
+	public var vertexBuffer:Vector.<VertexBuffer3D>;
+	public var vertexInfoFormat:Vector.<String>;
+	public var indexBuffer:Vector.<IndexBuffer3D>;
+	private var _clear:Boolean = true;
 	
 	public function MeshRenderInfo()
 	{
+		material = new Vector.<Material>();
+		vertexBuffer = new Vector.<VertexBuffer3D>();
+		vertexInfoFormat = new Vector.<String>();
+		indexBuffer = new Vector.<IndexBuffer3D>();
 	}
 	
 	public function dispose():void
 	{
-		if (vertexBuffer) {
-			vertexBuffer.dispose();
-			vertexBuffer = null;
+		_clear = true;
+		material.length = 0;
+		if (vertexBuffer.length) {
+			for each(var vb:VertexBuffer3D in vertexBuffer)
+				vb.dispose();
+			vertexBuffer.length = 0;
 		}
 		if (indexBuffer) {
-			indexBuffer.dispose();
+			for each(var ib:IndexBuffer3D in indexBuffer)
+				ib.dispose();
 			indexBuffer = null;
 		}
 	}
+	
+	public function get length():int { return material.length; }
+	public function get clear():Boolean { return _clear; }
 }

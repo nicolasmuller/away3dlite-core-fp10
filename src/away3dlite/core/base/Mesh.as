@@ -167,7 +167,7 @@ package away3dlite.core.base
 					//reset face materials
 					if (oldMaterial != newMaterial) {
 						//remove old material from lists
-						if (oldMaterial) {
+						if (oldMaterial && oldMaterial._id.length) {
 							_scene.removeSceneMaterial(oldMaterial);
 							removeMaterial(oldMaterial);
 						}
