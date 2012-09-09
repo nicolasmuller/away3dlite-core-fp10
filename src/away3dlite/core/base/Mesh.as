@@ -305,6 +305,14 @@ package away3dlite.core.base
 		}
 		
 		/**
+		 * Indicate if the mesh (after render pass) is entirely invisible
+		 */
+		public function get offscreen():Boolean 
+		{
+			return _offscreen;
+		}
+		
+		/**
 		 * Creates a new <code>Mesh</code> object.
 		 * 
 		 * @param material		Determines the global material used on the faces in the mesh.

@@ -606,7 +606,8 @@ package away3dlite.loaders
    			}
    			*/
    			
-   			_objectData.name = String(node.@id);
+			var name:String = node.@name;
+   			_objectData.name = name.length ? name : String(node.@id);
    
             _transform = _objectData.transform;
 			

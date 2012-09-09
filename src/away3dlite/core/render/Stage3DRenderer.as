@@ -183,7 +183,7 @@ package away3dlite.core.render
 				else if (c is Mesh) 
 				{
 					var mesh:Mesh = c as Mesh;
-					if (mesh._offscreen/* || mesh.screenPosition.z > 0*/) off++;
+					if (mesh._offscreen) off++;
 					if (canRender(mesh))
 					{
 						var renderInfo:MeshRenderInfo = updateMeshBuffers(mesh);
@@ -364,7 +364,7 @@ package away3dlite.core.render
 		 */
 		private function canRender(mesh:Mesh):Boolean
 		{
-			return !mesh._offscreen /*&& mesh.screenPosition.z > 0*/ && mesh.material
+			return !mesh._offscreen && mesh.material
 				&& (mesh.material is BitmapMaterial || mesh.material is ColorMaterial);
 		}
 		
