@@ -44,6 +44,8 @@ package away3dlite.core.base
 		/** @private */
 		arcane var _faceMaterials:Vector.<Material> = new Vector.<Material>();
 		/** @private */
+		arcane var _offscreen:Boolean;
+		/** @private */
 		arcane var _renderInfo:*;
 		/** @private */
 		arcane override function updateScene(val:Scene3D):void

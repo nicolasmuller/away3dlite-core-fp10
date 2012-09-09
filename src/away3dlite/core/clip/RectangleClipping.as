@@ -20,6 +20,7 @@ package away3dlite.core.clip
 			_screenVerticesCull = new Vector.<int>();
         	_index = _screenVerticesCull.length = _screenVertices.length/2;
         	_screenVerticesCull.fixed = true;
+			var isOffscreen:Boolean = true;
         	
         	while (_index--) {
         		_indexX = _index*2;
@@ -52,10 +53,13 @@ package away3dlite.core.clip
 	        			_cullCount = _screenVerticesCull[_face.i0] + _screenVerticesCull[_face.i1] + _screenVerticesCull[_face.i2];
         			}
 	        		
-        			if (!(_cullCount >> 16) && (_cullCount >> 12 & 15) < _cullTotal && (_cullCount >> 8 & 15) < _cullTotal && (_cullCount >> 4 & 15) < _cullTotal && (_cullCount & 15) < _cullTotal)
+        			if (!(_cullCount >> 16) && (_cullCount >> 12 & 15) < _cullTotal && (_cullCount >> 8 & 15) < _cullTotal && (_cullCount >> 4 & 15) < _cullTotal && (_cullCount & 15) < _cullTotal) {
+						isOffscreen = false;
 						faces[faces.length] = _face;
+					}
         		}
         	}
+			mesh._offscreen = isOffscreen;
         }
         
 		/**

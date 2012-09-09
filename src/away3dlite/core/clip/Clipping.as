@@ -54,10 +54,14 @@ package away3dlite.core.clip
         {
         	_faces = mesh._faces;
         	_screenVertices = mesh._screenVertices;
+			var isOffscreen:Boolean = true;
         	
         	for each(_face in _faces)
-        	    if (mesh.bothsides || _screenVertices[_face.x0]*(_screenVertices[_face.y2] - _screenVertices[_face.y1]) + _screenVertices[_face.x1]*(_screenVertices[_face.y0] - _screenVertices[_face.y2]) + _screenVertices[_face.x2]*(_screenVertices[_face.y1] - _screenVertices[_face.y0]) > 0)
+        	    if (mesh.bothsides || _screenVertices[_face.x0] * (_screenVertices[_face.y2] - _screenVertices[_face.y1]) + _screenVertices[_face.x1] * (_screenVertices[_face.y0] - _screenVertices[_face.y2]) + _screenVertices[_face.x2] * (_screenVertices[_face.y1] - _screenVertices[_face.y0]) > 0) {
+					isOffscreen = false;
         			faces[faces.length] = _face;
+				}
+			mesh._offscreen = isOffscreen;
         }
     	/** @private */
         arcane function screen(container:Sprite, _loaderWidth:Number, _loaderHeight:Number):Clipping

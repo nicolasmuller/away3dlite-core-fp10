@@ -120,11 +120,8 @@ package away3dlite.core.render
 			super.render();
 			
 			_faces = new Vector.<Face>();
-			
-			if (_view.mouseEnabled3D) collectFaces(_scene);
-			
+			collectFaces(_scene); // for clipping
 			_faces.fixed = true;
-			
 			_view._renderedFaces = _faces.length;
 			
 			render3D();
@@ -135,7 +132,6 @@ package away3dlite.core.render
 			_sort.fixed = false;
 			_sort.length = _faces.length;
 			_sort.fixed = true;
-			
 			if (_view.mouseEnabled3D) sortFaces();
 		}
 		
@@ -161,10 +157,14 @@ package away3dlite.core.render
 			mProjection.append(projection);
 			
 			// render
+			off = 0;
 			renderContainer(_view.scene, mProjection);
+			//trace(off);
 			
 			context.present();
 		}
+		
+		private var off:int;
 		
 		private function renderContainer(cont:ObjectContainer3D, mParent:Matrix3D):void 
 		{
@@ -183,6 +183,7 @@ package away3dlite.core.render
 				else if (c is Mesh) 
 				{
 					var mesh:Mesh = c as Mesh;
+					if (mesh._offscreen/* || mesh.screenPosition.z > 0*/) off++;
 					if (canRender(mesh))
 					{
 						var renderInfo:MeshRenderInfo = updateMeshBuffers(mesh);
@@ -352,7 +353,7 @@ package away3dlite.core.render
 				// TODO fix projection to match exactly the FP10 output
 				var r:Number = stageWidth / stageHeight;
 				var w:Number = (stageHeight / 1000);
-				projection.perspectiveLH(w * r, w, 0.9, 1000);
+				projection.perspectiveLH(w * r, w, 1, 1000);
 				// setup context
 				context.configureBackBuffer(stageWidth, stageHeight, 2, true);
 			}
@@ -363,7 +364,7 @@ package away3dlite.core.render
 		 */
 		private function canRender(mesh:Mesh):Boolean
 		{
-			return mesh._indices.length && mesh.material
+			return !mesh._offscreen /*&& mesh.screenPosition.z > 0*/ && mesh.material
 				&& (mesh.material is BitmapMaterial || mesh.material is ColorMaterial);
 		}
 		
@@ -504,10 +505,7 @@ package away3dlite.core.render
 				
 			if (!texture) 
 			{
-				var mipmap:Boolean = false;
-				if (material is BitmapMaterialEx && (material as BitmapMaterialEx).mipmap)
-					mipmap = true;
-				texture = createAndUploadTexture(bmp, mipmap, material.smooth);
+				texture = createAndUploadTexture(bmp, material.mipmap, material.smooth);
 			}
 			context.setTextureAt(1, texture);
 		}
@@ -551,13 +549,9 @@ package away3dlite.core.render
 				createTexture(bmat);
 				
 				// options
-				if (material is BitmapMaterialEx)
-				{
-					var amat:BitmapMaterialEx = material as BitmapMaterialEx;
-					transparent = !amat.opaque;
-					premultipliedAlphas = amat.premultipliedAlphas;
-					mipmap = amat.mipmap;
-				}
+				transparent = !bmat.opaque;
+				premultipliedAlphas = bmat.premultipliedAlphas;
+				mipmap = bmat.mipmap;
 				
 				// get program
 				template = "bitmap";
