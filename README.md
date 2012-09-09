@@ -18,13 +18,14 @@ The goal is to have a rudimentary (but simple and fast) Stage3D renderer for sim
  - custom shaders (Object3D's arcane _program).
 
 **Gotchas:**
- - for transparent PNGs to blend correctly, the Object3Ds order (in their container) is meaningful, not their z position.
+ - for transparent PNGs to blend correctly, the Object3Ds order (in their container) is meaningful (transparent should be latest), not their z position,
+ - to refresh a texture after a BitmapData change, call 'renderer.invalidateTexture(bmp)'.
 
 **TODO:**
- - check stability, leaks
- - test all the primitives, colladas,...
+ - check stability, leaks,
+ - more tests (I tried Planes, Skybox6 and some multi-material Colladas),
  - fix projection to match exactly the FP10 output (it's close but not enough to reuse the original mouse handling),
- 
+
 **Example usage:** 
  - code: https://gist.github.com/3659167
  - running: http://philippe.elsass.me/lab/away3dlite-stage3d
