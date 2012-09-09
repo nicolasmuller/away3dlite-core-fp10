@@ -569,7 +569,7 @@ package away3dlite.loaders
 		 * @see away3dlite.loaders.data.MeshData
 		 */
         private function parseNode(node:XML, parent:ContainerData):void
-        {	
+        {
 			var _transform:Matrix3D;
 	    	var _objectData:ObjectData;
 	    	
@@ -616,6 +616,7 @@ package away3dlite.loaders
            	var geo:XML;
            	var ctrlr:XML;
            	var sid:String;
+			var iurl:String;
 			var instance_material:XML;
 			var arrayChild:Array;
 			var boneData:BoneData = (_objectData as BoneData);
@@ -709,10 +710,10 @@ package away3dlite.loaders
 
                     case "instance_geometry":
                     	if(String(childNode).indexOf("lines") == -1) {
-							
+							iurl = getId(childNode.@url) + ":";
 							//add materials to materialLibrary
 	                        for each (instance_material in childNode..instance_material)
-	                        	parseMaterial(instance_material.@symbol, getId(instance_material.@target));
+	                        	parseMaterial(iurl + instance_material.@symbol, getId(instance_material.@target));
 							
 							geo = collada["library_geometries"].geometry.(@id == getId(childNode.@url))[0];
 							
@@ -722,10 +723,11 @@ package away3dlite.loaders
                         break;
 					
                     case "instance_controller":
+						iurl = getId(childNode.@url) + ":";
 						
 						//add materials to materialLibrary
 						for each (instance_material in childNode..instance_material)
-							parseMaterial(instance_material.@symbol, getId(instance_material.@target));
+							parseMaterial(iurl + instance_material.@symbol, getId(instance_material.@target));
 						
 						ctrlr = collada["library_controllers"].controller.(@id == getId(childNode.@url))[0];
 						geo = collada["library_geometries"].geometry.(@id == getId(ctrlr["skin"][0].@source))[0];
@@ -777,6 +779,7 @@ package away3dlite.loaders
 			Debug.trace(" + Parse Geometry : "+ geometryData.name);
 			
             // Triangles
+			var gid:String = geometryData.geoXML.@id;
             var trianglesXMLList:XMLList = geometryData.geoXML["mesh"].triangles;
             
             // C4D
@@ -805,7 +808,7 @@ package away3dlite.loaders
 				
                 var data     :Array  = triangles["p"].split(' ');
                 var len      :Number = triangles.@count;
-                var symbol :String = triangles.@material;
+                var symbol :String = gid + ":" + triangles.@material;
                 
 				Debug.trace(" + Parse MeshMaterialData");
                 var _meshMaterialData:MeshMaterialData = new MeshMaterialData();

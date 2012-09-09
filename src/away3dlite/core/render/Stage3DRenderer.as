@@ -92,6 +92,7 @@ package away3dlite.core.render
 		{
 			super();
 			this.contextID = contextID;
+			Material.DEFAULT_SMOOTH = true;
 		}
 		
 		/**
@@ -535,7 +536,7 @@ package away3dlite.core.render
 		 */
 		private function setProgram(material:Material, blendMode:String):Boolean 
 		{
-			var transparent:Boolean = true;
+			var transparent:Boolean = false;
 			var premultipliedAlphas:Boolean = true;
 			var mipmap:Boolean = false;
 			var additive:Boolean = blendMode == "add";
@@ -553,7 +554,7 @@ package away3dlite.core.render
 				if (material is BitmapMaterialEx)
 				{
 					var amat:BitmapMaterialEx = material as BitmapMaterialEx;
-					transparent = amat.transparent;
+					transparent = !amat.opaque;
 					premultipliedAlphas = amat.premultipliedAlphas;
 					mipmap = amat.mipmap;
 				}
@@ -586,6 +587,9 @@ package away3dlite.core.render
 				
 				// clear texture
 				context.setTextureAt(1, null);
+				
+				// options
+				transparent = cmat.alpha < 1;
 				
 				// get program
 				template = "color";

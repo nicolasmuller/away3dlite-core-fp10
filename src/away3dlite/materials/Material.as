@@ -30,6 +30,8 @@ package away3dlite.materials
 	 */	
 	public class Material extends EventDispatcher
 	{
+		static public var DEFAULT_SMOOTH:Boolean = false;
+		
 		/** @private */
 		arcane var _id:Vector.<uint> = new Vector.<uint>();
 		/** @private */
@@ -118,7 +120,7 @@ package away3dlite.materials
 		 */
 		public function Material() 
 		{
-			
+			_graphicsBitmapFill.smooth = DEFAULT_SMOOTH;
 		}
 	}
 }

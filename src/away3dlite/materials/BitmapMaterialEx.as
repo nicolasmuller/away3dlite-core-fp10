@@ -12,9 +12,9 @@ package away3dlite.materials
 	public class BitmapMaterialEx extends BitmapMaterial 
 	{
 		/** @private */
-		protected var _mipmap:Boolean = false;
+		protected var _mipmap:Boolean;
 		/** @private */
-		protected var _transparent:Boolean = true;
+		protected var _opaque:Boolean;
 		/** @private */
 		protected var _premultipliedAlphas:Boolean = true;
 		
@@ -22,14 +22,18 @@ package away3dlite.materials
 		 * Creates a new <code>BitmapMaterial</code> object.
 		 * 
 		 * @param	bitmap		The bitmapData object to be used as the material's texture.
+		 * @param	opaque		Optimize rendering for non-transparent textures
+		 * @param	mipmap		Generate mip-mapping textures (smoother display at reduced size)
 		 */
-		public function BitmapMaterialEx(bitmap:BitmapData = null) 
+		public function BitmapMaterialEx(bitmap:BitmapData = null, opaque:Boolean = true, mipmap:Boolean = false) 
 		{
 			super(bitmap);
+			_opaque = opaque;
+			_mipmap = mipmap;
 		}
 		
 		/**
-		 * Defines wether the Stage3D mipmapping should be used
+		 * Defines wether the Stage3D mipmapping should be used (smoother display at reduced size)
 		 */
 		public function get mipmap():Boolean 
 		{
@@ -43,21 +47,21 @@ package away3dlite.materials
 		}
 		
 		/**
-		 * Defines wether to bitmap contains alpha transparency
+		 * Defines wether to bitmap rendering can be optimized for non-transparent blending
 		 */
-		public function get transparent():Boolean 
+		public function get opaque():Boolean 
 		{
-			return _transparent;
+			return _opaque;
 		}
 		
-		public function set transparent(value:Boolean):void 
+		public function set opaque(value:Boolean):void 
 		{
-			_transparent = value;
+			_opaque = value;
 			_program = null;
 		}
 		
 		/**
-		 * Defines wether the bitmap needs pre-computed alphas correction
+		 * Defines wether the bitmap needs pre-computed alphas correction (true for Flash bitmapDatas)
 		 */
 		public function get premultipliedAlphas():Boolean 
 		{
