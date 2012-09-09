@@ -19,7 +19,7 @@ The goal is to have a rudimentary (but simple and fast) Stage3D renderer for sim
 
 **Gotchas:**
  - for transparent PNGs to blend correctly, the Object3Ds order (in their container) is meaningful (transparent should be latest), not their z position,
- - to refresh a texture after a BitmapData change, call 'renderer.invalidateTexture(bmp)'.
+ - to refresh a texture after a BitmapData change, call 'renderer.invalidateTexture(bmp)' (tested with MP4s and transparent FLVs).
 
 **TODO:**
  - check stability, leaks,
