@@ -37,6 +37,11 @@ package away3dlite.materials
 		private var _materialloadprogress:MaterialEvent;
 		private var _materialloadsuccess:MaterialEvent;
 		
+		public function get loader():Loader 
+		{
+			return _loader;
+		}
+		
 		private function onError(e:IOErrorEvent):void
 		{			
 			if (!_materialloaderror)
@@ -70,13 +75,15 @@ package away3dlite.materials
 		 */
 		public function BitmapFileMaterial(url:String="")
         {
-            super(new BitmapData(100,100));
+            super(new BitmapData(100, 100));
+			
+			source = url;
 			
 			_loader = new Loader();
 			_loader.contentLoaderInfo.addEventListener(IOErrorEvent.IO_ERROR, onError);
             _loader.contentLoaderInfo.addEventListener(ProgressEvent.PROGRESS, onProgress);
 			_loader.contentLoaderInfo.addEventListener(Event.COMPLETE, onComplete);
-			_loader.load(new URLRequest(url));
+			if (url && url.length) _loader.load(new URLRequest(url));
         }
     }
 }

@@ -10,6 +10,8 @@ package away3dlite.materials
      */
 	public class BitmapMaterial extends Material
 	{
+		public var source:String;
+		
 		/** @private Stage3DRenderer */
 		protected var _mipmap:Boolean = false;
 		/** @private Stage3DRenderer */

@@ -35,6 +35,7 @@ package away3dlite.loaders
 		private var _containers:Dictionary = new Dictionary(true);
 		private var _skinControllers:Vector.<SkinController> = new Vector.<SkinController>();
 		private var _skinController:SkinController;
+		private var isC4D:Boolean;
 		
 		public var bothsides:Boolean = true;
 		public var useIDAsName:Boolean = true;
@@ -597,14 +598,11 @@ package away3dlite.loaders
 			else
 				_objectData.id = node.@id;
 			
-			/* Deprecated for ColladaMaya 3.02
-			if(String(node.@name) != "")
-			{
+			/* Deprecated for ColladaMaya 3.02 */
+			if (isC4D && String(node.@name) != "")
             	_objectData.name = String(node.@name);
-   			}else{
+   			else
    				_objectData.name = String(node.@id);
-   			}
-   			*/
    			
 			var name:String = node.@name;
    			_objectData.name = name.length ? name : String(node.@id);
@@ -784,7 +782,7 @@ package away3dlite.loaders
             var trianglesXMLList:XMLList = geometryData.geoXML["mesh"].triangles;
             
             // C4D
-            var isC4D:Boolean = (trianglesXMLList.length()==0 && geometryData.geoXML["mesh"].polylist.length()>0);
+            isC4D = (trianglesXMLList.length()==0 && geometryData.geoXML["mesh"].polylist.length()>0);
             if(isC4D)
             	trianglesXMLList = geometryData.geoXML["mesh"].polylist;
             

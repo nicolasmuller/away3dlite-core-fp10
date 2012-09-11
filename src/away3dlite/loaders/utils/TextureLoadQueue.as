@@ -26,6 +26,7 @@ package away3dlite.loaders.utils
 		
 		private function redispatchEvent(e:Event):void
 		{
+			if (e.type == IOErrorEvent.IO_ERROR) trace("Error loading:", currentURLRequest.url);
 			dispatchEvent(e);
 		}
 		
@@ -48,7 +49,6 @@ package away3dlite.loaders.utils
 				if(currentLoader.contentLoaderInfo.bytesLoaded > 0 && currentLoader.contentLoaderInfo.bytesLoaded == currentLoader.contentLoaderInfo.bytesTotal){
 					
 				}else{
-				
 					// make it lowest priority so we handle it after the loader handles the event itself. That means that when we
 					// re-dispatch the event, the loaders have already processed their data and are ready for use
 					currentLoader.contentLoaderInfo.addEventListener(Event.COMPLETE, onItemComplete, false, int.MIN_VALUE, true);
