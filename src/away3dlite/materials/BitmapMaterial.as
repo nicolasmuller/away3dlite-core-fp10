@@ -132,6 +132,7 @@ package away3dlite.materials
 			_mipmap = mipmap;
 			
 			_graphicsBitmapFill.bitmapData = bitmap || new BitmapData(100, 100, false, 0x000000);
+			_graphicsBitmapFill.smooth = DEFAULT_SMOOTH;
 			
 			graphicsData = Vector.<IGraphicsData>([_graphicsStroke, _graphicsBitmapFill, _triangles, _graphicsEndFill]);
 			graphicsData.fixed = true;

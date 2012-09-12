@@ -30,7 +30,7 @@ package away3dlite.materials
 	 */	
 	public class Material extends EventDispatcher
 	{
-		static public var DEFAULT_SMOOTH:Boolean = false;
+		static public var DEFAULT_SMOOTH:Boolean = true;
 		
 		/** @private */
 		arcane var _id:Vector.<uint> = new Vector.<uint>();

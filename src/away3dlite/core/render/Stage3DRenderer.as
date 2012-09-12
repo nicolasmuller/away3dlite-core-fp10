@@ -218,7 +218,7 @@ package away3dlite.core.render
 		/** allow the creation of textures (nearest power of 2 size) smaller than original bitmap */
 		public var optimizeTextureSize:Number = 0.1;
 		/** limit texture size */
-		public var maxTextureSize:int = 1024;// 2048;
+		public var maxTextureSize:int = 2048;
 		
 		arcane var stage:Stage;
 		arcane var stageWidth:int;
