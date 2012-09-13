@@ -18,10 +18,12 @@ package away3dlite.core.render
 	import flash.display3D.Program3D;
 	import flash.display3D.textures.Texture;
 	import flash.display3D.VertexBuffer3D;
+	import flash.events.ErrorEvent;
 	import flash.events.Event;
 	import flash.events.MouseEvent;
 	import flash.geom.Matrix;
 	import flash.geom.Matrix3D;
+	import flash.geom.Point;
 	import flash.geom.Utils3D;
 	import flash.geom.Vector3D;
 	import flash.utils.ByteArray;
@@ -40,6 +42,9 @@ package away3dlite.core.render
 	 */
 	public class Stage3DRenderer extends Renderer
 	{
+		public static const STAGE3D_READY:String = "stage3dReady";
+		public static const STAGE3D_FAILED:String = "stage3dFailed";
+		
 		private var _mesh:Mesh;
 		private var _screenVertices:Vector.<Number>;
 		private var _uvtData:Vector.<Number>;
@@ -124,6 +129,12 @@ package away3dlite.core.render
 			_faces.fixed = true;
 			_view._renderedFaces = _faces.length;
 			
+			/*if (_mouseEnabled) {
+				_view.graphics.clear();
+				_view.graphics.beginFill(0, 0);
+				_view.graphics.drawRect(mousePos.x - 10, mousePos.y - 10, 20, 20);
+			}*/
+			
 			render3D();
 			
 			if (!_faces.length)
@@ -132,7 +143,7 @@ package away3dlite.core.render
 			_sort.fixed = false;
 			_sort.length = _faces.length;
 			_sort.fixed = true;
-			if (_view.mouseEnabled3D) sortFaces();
+			if (_mouseEnabled) sortFaces();
 		}
 		
 		/* STAGE 3D RENDER */
@@ -219,6 +230,8 @@ package away3dlite.core.render
 		public var optimizeTextureSize:Number = 0.1;
 		/** limit texture size */
 		public var maxTextureSize:int = 2048;
+		/** report failure if no Hardware mode is available */
+		public var failOnSoftware:Boolean = true;
 		
 		arcane var stage:Stage;
 		arcane var stageWidth:int;
@@ -234,6 +247,8 @@ package away3dlite.core.render
 		arcane var bmps:Vector.<BitmapData> = new Vector.<BitmapData>();
 		arcane var textures:Vector.<Texture> = new Vector.<Texture>();
 		arcane var toDispose:Vector.<Mesh> = new Vector.<Mesh>();
+		arcane var mousePos:Point = new Point();
+		
 		arcane var PROGRAMS:XML = <programs>
 			<color>
 				<vertex><![CDATA[
@@ -255,26 +270,13 @@ package away3dlite.core.render
 			</bitmap>
 		</programs>;
 		
-		private function init():void
-		{
-			if (this.stage) dispose();
-			this.stage = _view.stage;
-			
-			// wait for Stage3D to provide us a Context3D
-			stage.stage3Ds[contextID].addEventListener(Event.CONTEXT3D_CREATE, context3dCreate);
-			stage.stage3Ds[contextID].requestContext3D();
-			
-			stage.addEventListener(MouseEvent.MOUSE_MOVE, stage_mouse);
-			
-			_view.addEventListener(Event.REMOVED_FROM_STAGE, dispose);
-		}
-		
 		private function dispose(e:Event = null):void
 		{
 			_view.removeEventListener(Event.REMOVED_FROM_STAGE, dispose);
 			
 			recycle();
 			
+			stage.stage3Ds[contextID].removeEventListener(ErrorEvent.ERROR, context3dError);
 			stage.stage3Ds[contextID].removeEventListener(Event.CONTEXT3D_CREATE, context3dCreate);
 			if (context) {
 				context.setTextureAt(1, null);
@@ -284,12 +286,65 @@ package away3dlite.core.render
 				context = null;
 			}
 			
-			stage.removeEventListener(MouseEvent.MOUSE_MOVE, stage_mouse);
+			//stage.removeEventListener(MouseEvent.MOUSE_MOVE, stage_mouse);
 			stage = null;
 		}
 		
+		private function init():void
+		{
+			if (this.stage) dispose();
+			this.stage = _view.stage;
+			
+			// wait for Stage3D to provide us a Context3D
+			stage.stage3Ds[contextID].addEventListener(ErrorEvent.ERROR, context3dError);
+			stage.stage3Ds[contextID].addEventListener(Event.CONTEXT3D_CREATE, context3dCreate);
+			stage.stage3Ds[contextID].requestContext3D();
+			
+			//stage.addEventListener(MouseEvent.MOUSE_MOVE, stage_mouse);
+			
+			_view.addEventListener(Event.REMOVED_FROM_STAGE, dispose);
+		}
+		
+		private function stage_mouse(e:MouseEvent):void 
+		{
+			if (_view) {
+				mousePos.x = _view.mouseX;
+				mousePos.y = _view.mouseY;
+				//if (_view && context && e.target == stage) _view.fireMouseEvent(e.type, e.ctrlKey, e.shiftKey);
+			}
+		}
+		
 		/**
-		 * Dispose all programs and buffers
+		 * Failed to create a 3D context
+		 */
+		private function context3dError(e:ErrorEvent):void 
+		{
+			_view.dispatchEvent(new Event(STAGE3D_FAILED));
+		}
+		
+		/**
+		 * We've got a 3D context, maybe accelerated
+		 */
+		private function context3dCreate(event:Event):void 
+		{
+			var ctx:Context3D = event.target.context3D;
+			if (failOnSoftware && ctx.driverInfo.indexOf("Software") >= 0)
+			{
+				ctx.dispose();
+				dispose();
+				_view.renderer = new BasicRenderer();
+				_view.dispatchEvent(new Event(STAGE3D_FAILED));
+			}
+			else
+			{
+				context = ctx;	
+				context.enableErrorChecking = true;
+				_view.dispatchEvent(new Event(STAGE3D_READY));
+			}
+		}
+		
+		/**
+		 * Dispose all programs and buffers (for when you want to clear the scene)
 		 */
 		public function recycle():void 
 		{
@@ -311,20 +366,6 @@ package away3dlite.core.render
 				if (programs[pid]) programs[pid].dispose();
 				delete programs[pid];
 			}
-		}
-		
-		private function stage_mouse(e:MouseEvent):void 
-		{
-			if (_view && context && e.target == stage) _view.fireMouseEvent(e.type, e.ctrlKey, e.shiftKey);
-		}
-		
-		/**
-		 * We've got a 3D context
-		 */
-		private function context3dCreate(event:Event):void 
-		{
-			context = event.target.context3D;	
-			context.enableErrorChecking = true;
 		}
 		
 		/**
