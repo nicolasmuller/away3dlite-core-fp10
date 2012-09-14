@@ -10,7 +10,9 @@ package away3dlite.core.render
 	import flash.display3D.Context3D;
 	import flash.display3D.Context3DBlendFactor;
 	import flash.display3D.Context3DCompareMode;
+	import flash.display3D.Context3DProfile;
 	import flash.display3D.Context3DProgramType;
+	import flash.display3D.Context3DRenderMode;
 	import flash.display3D.Context3DTextureFormat;
 	import flash.display3D.Context3DTriangleFace;
 	import flash.display3D.Context3DVertexBufferFormat;
@@ -26,6 +28,7 @@ package away3dlite.core.render
 	import flash.geom.Point;
 	import flash.geom.Utils3D;
 	import flash.geom.Vector3D;
+	import flash.system.Capabilities;
 	import flash.utils.ByteArray;
 	import flash.utils.getTimer;
 	
@@ -97,6 +100,7 @@ package away3dlite.core.render
 		{
 			super();
 			this.contextID = contextID;
+			alphas = new <Number>[1.0, 1.0, 1.0, 1.0];
 			Material.DEFAULT_SMOOTH = true;
 		}
 		
@@ -175,8 +179,6 @@ package away3dlite.core.render
 			context.present();
 		}
 		
-		private var off:int;
-		
 		private function renderContainer(cont:ObjectContainer3D, mParent:Matrix3D):void 
 		{
 			for each(var c:Object3D in cont.children)
@@ -201,10 +203,11 @@ package away3dlite.core.render
 						
 						var len:int = renderInfo.length;
 						var blendMode:String = mesh.blendMode;
+						var alpha:Number = mesh.alpha;
 						for (var i:int = 0; i < len; i++) 
 						{
 							// set shader and blending option
-							if (setProgram(renderInfo.material[i], blendMode))
+							if (setProgram(renderInfo.material[i], blendMode, alpha))
 							{
 								// move x,y,z in register 0
 								context.setVertexBufferAt(0, renderInfo.vertexBuffer[i], 0, Context3DVertexBufferFormat.FLOAT_3);
@@ -212,6 +215,11 @@ package away3dlite.core.render
 								context.setVertexBufferAt(1, renderInfo.vertexBuffer[i], 3, renderInfo.vertexInfoFormat[i]);
 								// set projection matrix
 								context.setProgramConstantsFromMatrix(Context3DProgramType.VERTEX, 0, c.viewMatrix3D, true);
+								// alpha
+								if (alpha != 1) {
+									alphas[0] = alphas[1] = alphas[2] = alphas[3] = alpha;
+									context.setProgramConstantsFromVector(Context3DProgramType.FRAGMENT, 0, alphas);
+								}
 								// provide triangles
 								context.drawTriangles(renderInfo.indexBuffer[i]);
 							}
@@ -232,6 +240,9 @@ package away3dlite.core.render
 		public var maxTextureSize:int = 2048;
 		/** report failure if no Hardware mode is available */
 		public var failOnSoftware:Boolean = true;
+		
+		private var off:int;
+		private var alphas:Vector.<Number>;
 		
 		arcane var stage:Stage;
 		arcane var stageWidth:int;
@@ -268,6 +279,16 @@ package away3dlite.core.render
 					tex oc, v1, fs1 <>	// sample the texture (fs1) at the interpolated UV coordinates (v0) and output
 				]]></fragment>
 			</bitmap>
+			<bitmap-opacity>
+				<vertex><![CDATA[
+					m44 op, va0, vc0	// m44 to output point
+					mov v1, va1			// interpolate the UVs (va1) into variable register v1
+				]]></vertex>
+				<fragment><![CDATA[
+					tex ft0, v1, fs1 <>	// sample the texture (fs1) at the interpolated UV coordinates (v0) and store in temp (ft0)
+					mul oc, ft0, fc0	// multiply sampled color by alpha and output
+				]]></fragment>
+			</bitmap-opacity>
 		</programs>;
 		
 		private function dispose(e:Event = null):void
@@ -298,7 +319,10 @@ package away3dlite.core.render
 			// wait for Stage3D to provide us a Context3D
 			stage.stage3Ds[contextID].addEventListener(ErrorEvent.ERROR, context3dError);
 			stage.stage3Ds[contextID].addEventListener(Event.CONTEXT3D_CREATE, context3dCreate);
-			stage.stage3Ds[contextID].requestContext3D();
+			
+			var fp:Number = parseFloat(Capabilities.version.split(" ")[1].replace(',','.'));
+			var profile:String = fp >= 11.4 ? "baselineConstrained" : Context3DProfile.BASELINE;
+			stage.stage3Ds[contextID].requestContext3D(Context3DRenderMode.AUTO, profile);
 			
 			//stage.addEventListener(MouseEvent.MOUSE_MOVE, stage_mouse);
 			
@@ -573,7 +597,7 @@ package away3dlite.core.render
 		/**
 		 * Create program for this material
 		 */
-		private function setProgram(material:Material, blendMode:String):Boolean 
+		private function setProgram(material:Material, blendMode:String, alpha:Number):Boolean 
 		{
 			var transparent:Boolean = false;
 			var premultipliedAlphas:Boolean = true;
@@ -596,6 +620,7 @@ package away3dlite.core.render
 				
 				// get program
 				template = "bitmap";
+				if (alpha < 1) template = "bitmap-opacity";
 				if (!bmat._program) 
 				{
 					var textureOptions:String = "2d," 
