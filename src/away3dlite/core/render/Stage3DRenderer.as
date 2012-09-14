@@ -173,14 +173,15 @@ package away3dlite.core.render
 			
 			// render
 			off = 0;
-			renderContainer(_view.scene, mProjection);
+			renderContainer(_view.scene, mProjection, 1);
 			//trace(off);
 			
 			context.present();
 		}
 		
-		private function renderContainer(cont:ObjectContainer3D, mParent:Matrix3D):void 
+		private function renderContainer(cont:ObjectContainer3D, mParent:Matrix3D, alpha:Number):void 
 		{
+			alpha *= cont.alpha;
 			for each(var c:Object3D in cont.children)
 			{
 				if (!c.visible) continue;
@@ -192,7 +193,7 @@ package away3dlite.core.render
 				c._screenPosition.x *= stageWidth / 2;
 				c._screenPosition.y *= -stageHeight / 2;
 				
-				if (c is ObjectContainer3D) renderContainer(c as ObjectContainer3D, c.viewMatrix3D);
+				if (c is ObjectContainer3D) renderContainer(c as ObjectContainer3D, c.viewMatrix3D, alpha);
 				else if (c is Mesh) 
 				{
 					var mesh:Mesh = c as Mesh;
@@ -203,11 +204,11 @@ package away3dlite.core.render
 						
 						var len:int = renderInfo.length;
 						var blendMode:String = mesh.blendMode;
-						var alpha:Number = mesh.alpha;
+						var localAlpha:Number = alpha * mesh.alpha;
 						for (var i:int = 0; i < len; i++) 
 						{
 							// set shader and blending option
-							if (setProgram(renderInfo.material[i], blendMode, alpha))
+							if (setProgram(renderInfo.material[i], blendMode, localAlpha))
 							{
 								// move x,y,z in register 0
 								context.setVertexBufferAt(0, renderInfo.vertexBuffer[i], 0, Context3DVertexBufferFormat.FLOAT_3);
@@ -216,8 +217,8 @@ package away3dlite.core.render
 								// set projection matrix
 								context.setProgramConstantsFromMatrix(Context3DProgramType.VERTEX, 0, c.viewMatrix3D, true);
 								// alpha
-								if (alpha != 1) {
-									alphas[0] = alphas[1] = alphas[2] = alphas[3] = alpha;
+								if (localAlpha != 1) {
+									alphas[0] = alphas[1] = alphas[2] = alphas[3] = localAlpha;
 									context.setProgramConstantsFromVector(Context3DProgramType.FRAGMENT, 0, alphas);
 								}
 								// provide triangles
@@ -270,6 +271,15 @@ package away3dlite.core.render
 					mov oc, v1			// move the Vertex Color (v1) to the output color
 				]]></fragment>
 			</color>
+			<color-opacity>
+				<vertex><![CDATA[
+					m44 op, va0, vc0	// m44 to output point
+					mov v1, va1			// interpolate Vertex Color (va1), to the variable register v1
+				]]></vertex>
+				<fragment><![CDATA[
+					mul oc, v1, fc0		// multiply the Vertex Color (v1) by alpha and output
+				]]></fragment>
+			</color-opacity>
 			<bitmap>
 				<vertex><![CDATA[
 					m44 op, va0, vc0	// m44 to output point
@@ -477,10 +487,10 @@ package away3dlite.core.render
 				// TODO ColorMaterial buffer building will only use the main model color (consistent with FP10 rendering)
 				vertexBuffer = context.createVertexBuffer(count, 7);
 				var rgb:int = (material as ColorMaterial).color;
-				var r:Number = ((rgb >> 16) & 0xff) / 256;
-				var g:Number = ((rgb >> 8) & 0xff) / 256;
-				var b:Number = (rgb & 0xff) / 256;
 				var a:Number = (material as ColorMaterial).alpha;
+				var r:Number = a * ((rgb >> 16) & 0xff) / 256;
+				var g:Number = a * ((rgb >> 8) & 0xff) / 256;
+				var b:Number = a * (rgb & 0xff) / 256;
 				for (i = 0; i < count; i++, vindex+=3)
 				{
 					vertexData.push(
@@ -621,6 +631,7 @@ package away3dlite.core.render
 				// get program
 				template = "bitmap";
 				if (alpha < 1) template = "bitmap-opacity";
+				
 				if (!bmat._program) 
 				{
 					var textureOptions:String = "2d," 
@@ -649,17 +660,19 @@ package away3dlite.core.render
 				context.setTextureAt(1, null);
 				
 				// options
-				transparent = cmat.alpha < 1;
+				transparent = cmat.alpha < 1 || alpha < 1;
 				
 				// get program
 				template = "color";
+				if (alpha < 1) template = "color-opacity";
+				
 				if (!cmat._program) 
 				{
 					cmat._program = createAndCompileProgram(template, "");
 				}
 				
 				// set active
-				setBlendMode(additive, cmat.alpha != 1, false);
+				setBlendMode(additive, transparent, true);
 				if (program != cmat._program) 
 				{
 					program = cmat._program;

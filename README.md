@@ -11,12 +11,12 @@ Introducing a new Stage3DRenderer (WIP) for Flash 11, while still keeping full F
 The goal is to have a rudimentary (but simple and fast) Stage3D renderer for simple 3D scenes.
 
 **Features:**
- - using Stage3D constrained mode, 
+ - using Stage3D constrained mode (if available), 
  - automatic fallback to DefaultRenderer,
  - automatic quads to triangles conversion, double-sided materials,
  - BitmapMaterial / BitmapMaterialEx (mipmap, transparency control),
  - ColorMaterial (color, alpha),
- - mesh.alpha blending,
+ - cascading Object3D.alpha blending,
  - additive blendmode (Object3D's blendMode).
 
 **Gotchas:**
@@ -28,8 +28,7 @@ The goal is to have a rudimentary (but simple and fast) Stage3D renderer for sim
  - more tests (I tried Planes, Skybox6 and some multi-material Colladas),
  - lights,
  - custom shaders,
- - fix projection to match exactly the FP10 output (it's close but not enough to reuse the original mouse handling),
- - implement lights.
+ - fix projection to match exactly the FP10 output (it's close but not enough to reuse the original mouse handling).
 
 **Example usage:** 
  - code: https://gist.github.com/3659167
