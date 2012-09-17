@@ -278,7 +278,7 @@ package away3dlite.core.render
 					mov v1, va1			// interpolate Vertex Color (va1), to the variable register v1
 				]]></vertex>
 				<fragment><![CDATA[
-					mul oc, v1, fc0		// multiply the Vertex Color (v1) by alpha and output
+					mul oc, v1, fc0		// multiply the Vertex Color (v1) by alpha constant (fc0) and output
 				]]></fragment>
 			</color-opacity>
 			<bitmap>
@@ -287,7 +287,7 @@ package away3dlite.core.render
 					mov v1, va1			// interpolate the UVs (va1) into variable register v1
 				]]></vertex>
 				<fragment><![CDATA[
-					tex oc, v1, fs1 <>	// sample the texture (fs1) at the interpolated UV coordinates (v0) and output
+					tex oc, v1, fs1 <>	// sample the texture (fs1) at the interpolated UV coordinates (v1) and output
 				]]></fragment>
 			</bitmap>
 			<bitmap-opacity>
@@ -296,13 +296,13 @@ package away3dlite.core.render
 					mov v1, va1			// interpolate the UVs (va1) into variable register v1
 				]]></vertex>
 				<fragment><![CDATA[
-					tex ft0, v1, fs1 <>	// sample the texture (fs1) at the interpolated UV coordinates (v0) and store in temp (ft0)
-					mul oc, ft0, fc0	// multiply sampled color by alpha and output
+					tex ft0, v1, fs1 <>	// sample the texture (fs1) at the interpolated UV coordinates (v1) and store in temp (ft0)
+					mul oc, ft0, fc0	// multiply sampled color (ft0) by alpha constant (fc0) and output
 				]]></fragment>
 			</bitmap-opacity>
 		</programs>;
 		
-		private function dispose(e:Event = null):void
+		public function dispose(e:Event = null):void
 		{
 			_view.removeEventListener(Event.REMOVED_FROM_STAGE, dispose);
 			
@@ -319,6 +319,7 @@ package away3dlite.core.render
 			}
 			
 			//stage.removeEventListener(MouseEvent.MOUSE_MOVE, stage_mouse);
+			stageWidth = stageHeight = 0;
 			stage = null;
 		}
 		
@@ -384,6 +385,11 @@ package away3dlite.core.render
 		 */
 		public function recycle():void 
 		{
+			bmps.length = 0;
+			for each(var tex:Texture in textures)
+				if (tex) tex.dispose();
+			textures.length = 0;
+			
 			for each(var mesh:Mesh in toDispose)
 			{
 				if (mesh.material is BitmapMaterial)
@@ -402,6 +408,7 @@ package away3dlite.core.render
 				if (programs[pid]) programs[pid].dispose();
 				delete programs[pid];
 			}
+			program = null;
 		}
 		
 		/**
