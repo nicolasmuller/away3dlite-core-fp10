@@ -10,7 +10,6 @@ package away3dlite.core.render
 	import flash.display3D.Context3D;
 	import flash.display3D.Context3DBlendFactor;
 	import flash.display3D.Context3DCompareMode;
-	import flash.display3D.Context3DProfile;
 	import flash.display3D.Context3DProgramType;
 	import flash.display3D.Context3DRenderMode;
 	import flash.display3D.Context3DTextureFormat;
@@ -241,6 +240,8 @@ package away3dlite.core.render
 		public var maxTextureSize:int = 2048;
 		/** report failure if no Hardware mode is available */
 		public var failOnSoftware:Boolean = true;
+		/** FP11.4 Stage3D profile (defaults to BASELINE_CONSTRAINED for better compatibility) */
+		public var stage3DProfile:String = "baselineConstrained";
 		
 		private var off:int;
 		private var alphas:Vector.<Number>;
@@ -330,9 +331,10 @@ package away3dlite.core.render
 			stage.stage3Ds[contextID].addEventListener(ErrorEvent.ERROR, context3dError);
 			stage.stage3Ds[contextID].addEventListener(Event.CONTEXT3D_CREATE, context3dCreate);
 			
-			var fp:Number = parseFloat(Capabilities.version.split(" ")[1].replace(',','.'));
-			var profile:String = fp >= 11.4 ? "baselineConstrained" : Context3DProfile.BASELINE;
-			stage.stage3Ds[contextID].requestContext3D(Context3DRenderMode.AUTO, profile);
+			var fp:Number = parseFloat(Capabilities.version.split(" ")[1].replace(',', '.'));
+			var requestContext3D:Function = stage.stage3Ds[contextID].requestContext3D;
+			if (fp >= 11.4) requestContext3D(Context3DRenderMode.AUTO, stage3DProfile);
+			else requestContext3D(Context3DRenderMode.AUTO);
 			
 			//stage.addEventListener(MouseEvent.MOUSE_MOVE, stage_mouse);
 			
