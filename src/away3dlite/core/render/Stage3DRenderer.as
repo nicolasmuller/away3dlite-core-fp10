@@ -302,6 +302,41 @@ package away3dlite.core.render
 			</bitmap-opacity>
 		</programs>;
 		
+		/**
+		 * Dispose all programs and buffers (for when you want to clear the scene)
+		 */
+		public function recycle():void 
+		{
+			bmps.length = 0;
+			for each(var tex:Texture in textures)
+				if (tex) tex.dispose();
+			textures.length = 0;
+			
+			for each(var mesh:Mesh in toDispose)
+			{
+				if (mesh.material is BitmapMaterial)
+					BitmapMaterial(mesh.material)._program = null;
+				
+				var renderInfo:MeshRenderInfo = mesh._renderInfo;
+				if (renderInfo) {
+					renderInfo.dispose();
+					mesh._renderInfo = null;
+				}
+			}
+			toDispose.length = 0;
+			
+			for (var pid:String in programs) 
+			{
+				if (programs[pid]) programs[pid].dispose();
+				delete programs[pid];
+			}
+			program = null;
+		}
+		
+		/**
+		 * Dispose the Stage3D context and all related resources 
+		 * (called automatically when the view is removed from stage)
+		 */
 		public function dispose(e:Event = null):void
 		{
 			_view.removeEventListener(Event.REMOVED_FROM_STAGE, dispose);
@@ -374,41 +409,12 @@ package away3dlite.core.render
 			}
 			else
 			{
-				context = ctx;	
-				context.enableErrorChecking = true;
+				context = ctx;
+				//context.enableErrorChecking = true;
+				if (stageWidth && stageHeight) setSize(stageWidth, stageHeight);
+				
 				_view.dispatchEvent(new Event(STAGE3D_READY));
 			}
-		}
-		
-		/**
-		 * Dispose all programs and buffers (for when you want to clear the scene)
-		 */
-		public function recycle():void 
-		{
-			bmps.length = 0;
-			for each(var tex:Texture in textures)
-				if (tex) tex.dispose();
-			textures.length = 0;
-			
-			for each(var mesh:Mesh in toDispose)
-			{
-				if (mesh.material is BitmapMaterial)
-					BitmapMaterial(mesh.material)._program = null;
-				
-				var renderInfo:MeshRenderInfo = mesh._renderInfo;
-				if (renderInfo) {
-					renderInfo.dispose();
-					mesh._renderInfo = null;
-				}
-			}
-			toDispose.length = 0;
-			
-			for (var pid:String in programs) 
-			{
-				if (programs[pid]) programs[pid].dispose();
-				delete programs[pid];
-			}
-			program = null;
 		}
 		
 		/**
@@ -423,14 +429,21 @@ package away3dlite.core.render
 			var sw:int = _view.x * 2;
 			var sh:int = _view.y * 2;
 			if (stageWidth != sw || stageHeight != sh) setSize(sw, sh);
-			return stageWidth > 0 && stageHeight > 0 && context;
+			if (!stageWidth || !stageWidth || !context) return false;
+			
+			if (context.driverInfo == "Disposed") // context loss
+			{
+				recycle();
+				context = null;
+				return false;
+			}
+			return true;
 		}
 		
 		private function setSize(width:int, height:int):void
 		{
 			stageWidth = width;
 			stageHeight = height;
-			
 			if (context && stageWidth && stageHeight) 
 			{
 				// compute projection matrix
