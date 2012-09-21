@@ -39,17 +39,16 @@ package away3dlite.core.render
 			_mouseEnabled = object._mouseEnabled = (_mouseEnabled && object.mouseEnabled);
 			
 			if (object is ObjectContainer3D) {
-				var children:Array = (object as ObjectContainer3D).children;
+				var container:ObjectContainer3D = object as ObjectContainer3D;
+				var children:Array = container.children;
 				var child:Object3D;
 				
 				for each (child in children)
 				{
 					if(child.layer)
 						child.layer.graphics.clear();
-					
 					collectFaces(child);
 				}
-				
 			}
 			
 			if (object is Mesh) {
