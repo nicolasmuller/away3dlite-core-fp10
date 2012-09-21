@@ -47,6 +47,15 @@ package away3dlite.core.render
 		public static const STAGE3D_READY:String = "stage3dReady";
 		public static const STAGE3D_FAILED:String = "stage3dFailed";
 		
+		/** allow the creation of textures (nearest power of 2 size) smaller than original bitmap */
+		static public var optimizeTextureSize:Number = 0.1;
+		/** limit texture size */
+		static public var maxTextureSize:int = 2048;
+		/** report failure if no Hardware mode is available */
+		static public var failOnSoftware:Boolean = false;
+		/** FP11.4 Stage3D profile (defaults to BASELINE_CONSTRAINED for better compatibility) */
+		static public var stage3DProfile:String = "baselineConstrained";
+		
 		private var _mesh:Mesh;
 		private var _screenVertices:Vector.<Number>;
 		private var _uvtData:Vector.<Number>;
@@ -234,15 +243,6 @@ package away3dlite.core.render
 		public var culling:String = "front";
 		public var contextID:int = 0;
 		
-		/** allow the creation of textures (nearest power of 2 size) smaller than original bitmap */
-		public var optimizeTextureSize:Number = 0.1;
-		/** limit texture size */
-		public var maxTextureSize:int = 2048;
-		/** report failure if no Hardware mode is available */
-		public var failOnSoftware:Boolean = true;
-		/** FP11.4 Stage3D profile (defaults to BASELINE_CONSTRAINED for better compatibility) */
-		public var stage3DProfile:String = "baselineConstrained";
-		
 		private var off:int;
 		private var alphas:Vector.<Number>;
 		
@@ -400,6 +400,8 @@ package away3dlite.core.render
 		private function context3dCreate(event:Event):void 
 		{
 			var ctx:Context3D = event.target.context3D;
+			trace(ctx.driverInfo);
+			
 			if (failOnSoftware && ctx.driverInfo.indexOf("Software") >= 0)
 			{
 				ctx.dispose();

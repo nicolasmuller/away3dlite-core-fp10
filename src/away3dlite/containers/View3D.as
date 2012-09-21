@@ -6,6 +6,7 @@ package away3dlite.containers {
 	import away3dlite.core.render.*;
 	import away3dlite.events.*;
 	import away3dlite.materials.*;
+	import flash.system.ApplicationDomain;
 	
 	import flash.display.*;
 	import flash.events.*;
@@ -20,6 +21,9 @@ package away3dlite.containers {
 	 */
 	public class View3D extends Sprite
 	{
+		/** Ignore Stage3D and use the default old Flash 10 renderer */
+		static public var forceFlash10Mode:Boolean = false;
+		
 		/** @private */
 		arcane var _totalFaces:int;
 		/** @private */
@@ -50,6 +54,7 @@ package away3dlite.containers {
         private var _menu1:ContextMenuItem;
         private var _sourceURL:String;
 		private var _renderer:Renderer;
+		private var _usingStage3D:Boolean;
 		private var _camera:Camera3D;
 		private var _scene:Scene3D;
         private var _clipping:Clipping;
@@ -394,6 +399,8 @@ package away3dlite.containers {
 			
 			_renderer = val;
 			_renderer.setView(this);
+			
+			if (isStage3DCapable()) _usingStage3D = _renderer is Stage3DRenderer;
 		}
         
 		/**
@@ -471,6 +478,14 @@ package away3dlite.containers {
 		}
 		
 		/**
+		 * Returns true if the renderer is or extends Stage3DRenderer
+		 */
+		public function get usingStage3D():Boolean
+		{
+			return _usingStage3D;
+		}
+		
+		/**
 		 * Creates a new <code>View3D</code> object.
 		 * 
 		 * @param	scene		Scene used when rendering.
@@ -484,7 +499,7 @@ package away3dlite.containers {
 			
 			this.scene = scene || new Scene3D();
 			this.camera = camera || new Camera3D();
-			this.renderer = renderer || new BasicRenderer();
+			this.renderer = renderer || createDefaultRenderer();
 			this.clipping = clipping || new RectangleClipping();
 			
             //setup events on view
@@ -502,6 +517,20 @@ package away3dlite.containers {
             _menu1 = new ContextMenuItem(APPLICATION_NAME + "\tv" + VERSION + "." + REVISION, true, true, true);
             _menu1.addEventListener(ContextMenuEvent.MENU_ITEM_SELECT, onVisitWebsite);
             updateContextMenu();
+		}
+		
+		/**
+		 * Detect if Stage3D is available and return the best renderer available
+		 */
+		protected function createDefaultRenderer():Renderer
+		{
+			if (!forceFlash10Mode && isStage3DCapable()) return new Stage3DRenderer();
+			else return new BasicRenderer();
+		}
+		
+		public function isStage3DCapable():Boolean
+		{
+			return ApplicationDomain.currentDomain.hasDefinition("flash.display.Stage3D");
 		}
         
 		/**
