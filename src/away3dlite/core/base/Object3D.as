@@ -365,5 +365,12 @@ package away3dlite.core.base
 
 			return object3D;
 		}
+		
+		public function dispose():void 
+		{
+			materialLibrary = null;
+			animationLibrary = null;
+			geometryLibrary = null;
+		}
 	}
 }

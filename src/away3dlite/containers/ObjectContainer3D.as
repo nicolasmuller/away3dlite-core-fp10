@@ -184,6 +184,16 @@ package away3dlite.containers
 			for each (var child:Object3D in childArray)
 				addChild(child);
 		}
+		
+		override public function dispose():void 
+		{
+			for each(var child:Object3D in _children)
+				if (child) {
+					removeChild(child);
+					child.dispose();
+				}
+			super.dispose();
+		}
         
 		/**
 		 * Adds a 3d object to the scene as a child of the container.

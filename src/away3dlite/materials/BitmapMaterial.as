@@ -139,5 +139,11 @@ package away3dlite.materials
 			
 			trianglesIndex = 2;
 		}
+		
+		override public function dispose():void 
+		{
+			if (_graphicsBitmapFill.bitmapData) _graphicsBitmapFill.bitmapData.dispose();
+			super.dispose();
+		}
 	}
 }

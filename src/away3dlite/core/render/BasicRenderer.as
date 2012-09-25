@@ -243,5 +243,15 @@ package away3dlite.core.render
 			}
 			
 		}
+		
+		override public function dispose():void 
+		{
+			_screenVertices = null;
+			_uvtData = null;
+			_material = null;
+			_material_graphicsData = null;
+			_mesh = null;
+			super.dispose();
+		}
 	}
 }

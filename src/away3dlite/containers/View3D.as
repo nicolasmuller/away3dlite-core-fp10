@@ -153,9 +153,18 @@ package away3dlite.containers {
 		
 		private function onAddedToStage(event:Event):void
 		{
+			removeEventListener(Event.ADDED_TO_STAGE, onAddedToStage);
 			stage.addEventListener(Event.RESIZE, onStageResized);
+			addEventListener(Event.REMOVED_FROM_STAGE, onRemovedFromStage);
 		}
-				
+		
+		private function onRemovedFromStage(e:Event):void 
+		{
+			removeEventListener(Event.REMOVED_FROM_STAGE, onRemovedFromStage);
+			stage.removeEventListener(Event.RESIZE, onStageResized);
+			addEventListener(Event.ADDED_TO_STAGE, onAddedToStage);
+		}
+		
         private function onMouseDown(e:MouseEvent):void
         {
             fireMouseEvent(MouseEvent3D.MOUSE_DOWN, e.ctrlKey, e.shiftKey);
@@ -519,6 +528,15 @@ package away3dlite.containers {
             updateContextMenu();
 		}
 		
+		public function dispose():void
+		{
+			if (_scene) scene.dispose();
+			if (_renderer) _renderer.dispose();
+			_renderer = null;
+			_scene = null;
+			_camera = null;
+		}
+		
 		/**
 		 * Detect if Stage3D is available and return the best renderer available
 		 */
@@ -528,6 +546,9 @@ package away3dlite.containers {
 			else return new BasicRenderer();
 		}
 		
+		/**
+		 * Does this Flash Player possibly support Stage3D?
+		 */
 		public function isStage3DCapable():Boolean
 		{
 			return ApplicationDomain.currentDomain.hasDefinition("flash.display.Stage3D");

@@ -122,5 +122,12 @@ package away3dlite.materials
 		{
 			_graphicsBitmapFill.smooth = DEFAULT_SMOOTH;
 		}
+		
+		public function dispose():void 
+		{
+			graphicsData = null;
+			_triangles = null;
+			_program = null;
+		}
 	}
 }

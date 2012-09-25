@@ -225,7 +225,8 @@ package away3dlite.core.render
 								// set projection matrix
 								context.setProgramConstantsFromMatrix(Context3DProgramType.VERTEX, 0, c.viewMatrix3D, true);
 								// alpha
-								if (localAlpha != 1) {
+								if (localAlpha != 1) 
+								{
 									alphas[0] = alphas[1] = alphas[2] = alphas[3] = localAlpha;
 									context.setProgramConstantsFromVector(Context3DProgramType.FRAGMENT, 0, alphas);
 								}
@@ -250,9 +251,9 @@ package away3dlite.core.render
 		arcane var stageWidth:int;
 		arcane var stageHeight:int;
 		arcane var context:Context3D;
-		arcane var program:Program3D;
+		arcane var program:ProgramInfo;
 		arcane var renderMode:String;
-		arcane var programs:Object = {};
+		arcane var programs:Dictionary = new Dictionary();
 		arcane var mProjection:Matrix3D = new Matrix3D();
 		arcane var zero:Vector3D = new Vector3D();
 		arcane var projection:PerspectiveMatrix3D = new PerspectiveMatrix3D();
@@ -333,18 +334,25 @@ package away3dlite.core.render
 			program = null;
 		}
 		
+		private function removedFromStage(e:Event = null):void
+		{
+			if (_view)
+				_view.removeEventListener(Event.REMOVED_FROM_STAGE, removedFromStage);
+			disposeResources();
+		}
+		
 		/**
 		 * Dispose the Stage3D context and all related resources 
 		 * (called automatically when the view is removed from stage)
 		 */
-		public function dispose(e:Event = null):void
+		public function disposeResources():void 
 		{
-			_view.removeEventListener(Event.REMOVED_FROM_STAGE, dispose);
-			
 			recycle();
 			
-			stage.stage3Ds[contextID].removeEventListener(ErrorEvent.ERROR, context3dError);
-			stage.stage3Ds[contextID].removeEventListener(Event.CONTEXT3D_CREATE, context3dCreate);
+			if (stage) {
+				stage.stage3Ds[contextID].removeEventListener(ErrorEvent.ERROR, context3dError);
+				stage.stage3Ds[contextID].removeEventListener(Event.CONTEXT3D_CREATE, context3dCreate);
+			}
 			if (context) {
 				context.setTextureAt(1, null);
 				context.setVertexBufferAt(0, null);
@@ -358,9 +366,15 @@ package away3dlite.core.render
 			stage = null;
 		}
 		
+		override public function dispose():void 
+		{
+			disposeResources();
+			super.dispose();
+		}
+		
 		private function init():void
 		{
-			if (this.stage) dispose();
+			if (this.stage) disposeResources();
 			this.stage = _view.stage;
 			
 			// wait for Stage3D to provide us a Context3D
@@ -374,7 +388,7 @@ package away3dlite.core.render
 			
 			//stage.addEventListener(MouseEvent.MOUSE_MOVE, stage_mouse);
 			
-			_view.addEventListener(Event.REMOVED_FROM_STAGE, dispose);
+			_view.addEventListener(Event.REMOVED_FROM_STAGE, removedFromStage);
 		}
 		
 		private function stage_mouse(e:MouseEvent):void 
@@ -405,7 +419,7 @@ package away3dlite.core.render
 			if (failOnSoftware && ctx.driverInfo.indexOf("Software") >= 0)
 			{
 				ctx.dispose();
-				dispose();
+				disposeResources();
 				_view.renderer = new BasicRenderer();
 				_view.dispatchEvent(new Event(STAGE3D_FAILED));
 			}
@@ -648,7 +662,7 @@ package away3dlite.core.render
 				createTexture(bmat);
 				
 				// options
-				transparent = !bmat.opaque;
+				transparent = !bmat.opaque || alpha < 1;
 				premultipliedAlphas = bmat.premultipliedAlphas;
 				mipmap = bmat.mipmap;
 				
@@ -656,7 +670,7 @@ package away3dlite.core.render
 				template = "bitmap";
 				if (alpha < 1) template = "bitmap-opacity";
 				
-				if (!bmat._program) 
+				if (!bmat._program || bmat._program.template != template) 
 				{
 					var textureOptions:String = "2d," 
 						+ (bmat.repeat ? "repeat," : "clamp,")
@@ -671,7 +685,7 @@ package away3dlite.core.render
 				{
 					program = bmat._program;
 					renderMode = template;
-					context.setProgram(program);
+					context.setProgram(program.shader);
 				}
 				return program != null;
 			}
@@ -701,7 +715,7 @@ package away3dlite.core.render
 				{
 					program = cmat._program;
 					renderMode = template;
-					context.setProgram(program);
+					context.setProgram(program.shader);
 				}
 				return program != null;
 			}
@@ -734,7 +748,7 @@ package away3dlite.core.render
 		/**
 		 * Create the vertext and fragment shaders that will run on the GPU
 		 */
-		private function createAndCompileProgram(template:String, textureOptions:String):Program3D 
+		private function createAndCompileProgram(template:String, textureOptions:String):ProgramInfo 
 		{
 			var pid:String = template + ":" + textureOptions;
 			if (programs[pid])
@@ -759,8 +773,9 @@ package away3dlite.core.render
 			// upload the combined program to the video Ram
 			prog.upload(vertexShader, fragmentShader); 
 			
-			programs[pid] = prog;
-			return prog;
+			var info:ProgramInfo = new ProgramInfo(template, prog);
+			programs[pid] = info;
+			return info;
 		}
 		
 		private function getCode(code:String):String
@@ -825,6 +840,7 @@ package away3dlite.core.render
 
 import away3dlite.materials.Material;
 import flash.display3D.IndexBuffer3D;
+import flash.display3D.Program3D;
 import flash.display3D.VertexBuffer3D;
 import flash.geom.Vector3D;
 
@@ -862,4 +878,23 @@ class MeshRenderInfo
 	
 	public function get length():int { return material.length; }
 	public function get clear():Boolean { return _clear; }
+}
+
+class ProgramInfo
+{
+	public var template:String;
+	public var shader:Program3D;
+	
+	public function ProgramInfo(template:String, shader:Program3D)
+	{
+		this.shader = shader;
+		this.template = template;
+	}
+	
+	public function dispose():void
+	{
+		if (shader) shader.dispose();
+		shader = null;
+		template = null;
+	}
 }

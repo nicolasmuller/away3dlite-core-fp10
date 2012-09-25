@@ -233,5 +233,28 @@ package away3dlite.core.render
 			
 			_screenVertexArrays.length = 0;
 		}
+		
+		public function dispose():void 
+		{
+			_screenVertexArrays = null;
+			_screenVertices = null;
+			_screenPointVertexArrays = null;
+			_screenPointVertices = null;
+			_faces = null;
+			_face = null;
+			_faceStore = null;
+			_sort = null;
+			_mouseEnabledArray = null;
+			q0 = null;
+			np0 = null;
+			q1 = null;
+			np1 = null;
+			_ind = null;
+			_vert = null;
+			_uvt = null;
+			_view_graphics_drawGraphicsData = null;
+			_view = null;
+			_scene = null;
+		}
 	}
 }

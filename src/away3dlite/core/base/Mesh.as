@@ -58,7 +58,7 @@ package away3dlite.core.base
 			
 			_scene = val;
 			
-			if (_scene)
+			if (_scene && val)
 				buildMaterials();
 		}
 		/** @private */
@@ -373,5 +373,24 @@ package away3dlite.core.base
 			
 			return mesh;
         }
+		
+		override public function dispose():void 
+		{
+			if (_faces)
+				for each(var face:Face in faces)
+					face.dispose();
+			if (_faceMaterials)
+				for each(var mat:Material in _faceMaterials)
+					mat.dispose();
+			if (_material) _material.dispose();
+			_vertices = null;
+			_screenVertices = null;
+			_uvtData = null;
+			_faces = null;
+			_faceMaterials = null;
+			_indices = null;
+			_faceLengths = null;
+			super.dispose();
+		}
 	}
 }

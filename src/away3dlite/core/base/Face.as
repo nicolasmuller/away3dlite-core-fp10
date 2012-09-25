@@ -353,5 +353,12 @@ package away3dlite.core.base
 			
             return new Vector3D((ad*au + bd*bu + cd*cu)/det, (ad*av + bd*bv + cd*cv)/det, (ad/az + bd/bz + cd/cz)/det);
 		}
+		
+		public function dispose():void 
+		{
+			_uvtData = null;
+			_vertices = null;
+			_screenVertices = null;
+		}
 	}
 }
