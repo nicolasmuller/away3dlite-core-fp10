@@ -151,6 +151,11 @@ package away3dlite.core.base
     	 * The minimum perspective value from which the 3d object can be viewed.
     	 */
         public var minPersp:Number = 0;
+		
+		/**
+		 * Some user data
+		 */
+		public var data:*;
         
 		/**
 		 * Returns the scene to which the 3d object belongs

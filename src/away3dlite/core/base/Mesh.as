@@ -258,6 +258,7 @@ package away3dlite.core.base
 				return;
 			
 			_material = val;
+			_faceMaterials = new Vector.<Material>(); // clear face-specific materials
 			
 			_materialsDirty = true;
 			_verticesDirty = true;
