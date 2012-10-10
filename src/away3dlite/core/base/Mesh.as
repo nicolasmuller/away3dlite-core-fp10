@@ -379,10 +379,10 @@ package away3dlite.core.base
 		{
 			if (_faces)
 				for each(var face:Face in faces)
-					face.dispose();
+					if (face) face.dispose();
 			if (_faceMaterials)
 				for each(var mat:Material in _faceMaterials)
-					mat.dispose();
+					if (mat) mat.dispose();
 			if (_material) _material.dispose();
 			_vertices = null;
 			_screenVertices = null;
