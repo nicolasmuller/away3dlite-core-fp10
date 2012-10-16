@@ -177,6 +177,12 @@ package away3dlite.core.render
 			mProjection.append(_view.scene.transform.matrix3D);
 			mProjection.append(_view.camera.invSceneMatrix3D);
 			mProjection.appendScale(sceneScale, -sceneScale, sceneScale);
+			
+			// TODO fix projection to match exactly the FP10 output
+			var ratio:Number = stageWidth / stageHeight;
+			var size:Number = stageHeight / 1000;
+			var zoom:Number = _view.camera.zoom / 10;
+			projection.perspectiveLH(size * ratio, size, 0.9 * zoom, 1000 * zoom);
 			mProjection.append(projection);
 			
 			// render
@@ -460,16 +466,10 @@ package away3dlite.core.render
 		{
 			stageWidth = width;
 			stageHeight = height;
+			
+			// setup context
 			if (context && stageWidth && stageHeight) 
-			{
-				// compute projection matrix
-				// TODO fix projection to match exactly the FP10 output
-				var r:Number = stageWidth / stageHeight;
-				var w:Number = (stageHeight / 1000);
-				projection.perspectiveLH(w * r, w, 1, 1000);
-				// setup context
 				context.configureBackBuffer(stageWidth, stageHeight, 2, true);
-			}
 		}
 		
 		/**
