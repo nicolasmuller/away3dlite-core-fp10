@@ -21,13 +21,13 @@ The goal is to have a rudimentary (but simple and fast) Stage3D renderer for sim
  - additive blendmode (Object3D's blendMode),
  - Object3Ds have new properties: offscreen, screenPosition.
 
-**Gotchas:** (lotsa)
+**Stage3DRenderer gotchas:** (lotsa)
  - approximative camera in Stage3D (not exactly matching Flash 10's),
  - no mouse events, no lightning,
  - for transparent PNGs to blend correctly, the Object3Ds order (in their container) is meaningful (transparent should be latest), not their z position,
  - to refresh a texture after a BitmapData change, call 'renderer.invalidateTexture(bmp)' (tested with MP4s and transparent FLVs).
 
-**TODO:**
+**Stage3DRenderer TODO:**
  - mouse events,
  - adapt MovieMaterial,
  - lights,
