@@ -158,7 +158,8 @@ package away3dlite.loaders
 			for each(_faceData in _geometryData.faces) {
 				//set face materials
 				_materialData = _faceData.materialData;
-				mesh._faceMaterials.push(_materialData.material);
+				if (_materialData)
+					mesh._faceMaterials.push(_materialData.material);
 				
 				//set vertices
 				i0 = _faceData.v0*3;
