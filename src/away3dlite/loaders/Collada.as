@@ -515,13 +515,14 @@ package away3dlite.loaders
     	/** @private */
         arcane override function parseNext():void
         {
-        	if (_parsedChunks < _geometryArrayLength)
-        		parseMesh(_geometryArray[_parsedChunks]);
-        	else
-        		parseChannel(_channelArray[-_geometryArrayLength + _parsedChunks]);
-        	
-        	_parsedChunks++;
-        	
+        	if (_parsedChunks < _geometryArrayLength) {
+				parseMesh(_geometryArray[_parsedChunks]);	
+				_parsedChunks++;
+			} else if (_channelArray) {
+				parseChannel(_channelArray[-_geometryArrayLength + _parsedChunks]);
+				_parsedChunks++;				
+			}
+
         	if (_parsedChunks == _totalChunks) {
 	        	//build materials
 				buildMaterials();
@@ -559,8 +560,10 @@ package away3dlite.loaders
 			
 			Debug.trace(" ! ------------- End Parse Scene -------------");
 			_geometryArray = geometryLibrary.getGeometryArray();
-			_geometryArrayLength = _geometryArray.length;
-			_totalChunks += _geometryArrayLength;
+			if (_geometryArray) {
+				_geometryArrayLength = _geometryArray.length;
+				_totalChunks += _geometryArrayLength;				
+			}
 		}
 		
 		/**
